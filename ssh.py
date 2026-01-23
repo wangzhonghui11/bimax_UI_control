@@ -31,9 +31,12 @@ class ssh_client():
         self.channel = None
 
     def is_connected(self):
-      """检查 SSH 连接是否仍然活动"""
-      transport = self.client.get_transport()
-      return transport is not None and transport.is_active()
+        """检查 SSH 连接是否仍然活动"""
+        try:
+            transport = self.client.get_transport()
+            return transport is not None and transport.is_active()
+        except:
+            return False
 
     def run_shell(self, command):
         # 执行shell命令,持续交互

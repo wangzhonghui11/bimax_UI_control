@@ -6,6 +6,7 @@ user = "bimax"
 password = "123"
 ip = "192.168.2.196"
 ros2_command = "ros2 action send_goal /function/arm/grasp bimax_msgs/action/BimaxFunction \"{{command: '{}'}}\""
+vel_command = "ros2 topic pub /function/vel bimax_msgs/msg/BimaxFunction \"{{command: '{}'}}\""
 
 def update_selection(dropdown):
     global ip
@@ -61,7 +62,55 @@ def interrupt():
     if ssh.is_connected():
         ssh.run_shell("\x03")
 
-with gr.Blocks() as demo:
+def wheel_forward():
+    global ssh
+    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'"
+    if ssh.is_connected():
+        ssh.run_shell(cmd)
+
+def wheel_backward():
+    global ssh
+    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: -0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'"
+    if ssh.is_connected():
+        ssh.run_shell(cmd)
+
+def wheel_right():
+    global ssh
+    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: -0.1745}}'"
+    if ssh.is_connected():
+        ssh.run_shell(cmd)
+
+def wheel_left():
+    global ssh
+    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.1745}}'"
+    if ssh.is_connected():
+        ssh.run_shell(cmd)
+
+def wheel_stop():
+    global ssh
+    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'"
+    if ssh.is_connected():
+        ssh.run_shell(cmd)
+
+# 升降电机控制
+
+
+with gr.Blocks(css="""
+      .square-button {
+          width: 100px !important;
+          height: 100px !important;
+          min-width: 100px !important;
+          max-width: 100px !important;
+          aspect-ratio: 1 !important;
+          flex: none !important;
+      }
+      .centered-row {
+          display: flex !important;
+          justify-content: center !important;
+          width: 100% !important;
+      }
+  """) as demo:
+    gr.Markdown("<h2 align='center'> 连接到机器人 </h2>")
     # 下拉框选择机器
     with gr.Row():
         dropdown = gr.Dropdown(
@@ -87,6 +136,37 @@ with gr.Blocks() as demo:
         connection_status = gr.Textbox(show_label=False)
 
     gr.Markdown("---")
+    gr.Markdown("<h2 align='center'> 方向盘 </h2>")
+    gr.Markdown("---")
+    with gr.Column():
+        with gr.Row(elem_classes="centered-row"):
+            forward_button = gr.Button("", icon="icons/forward.png", elem_classes="square-button")
+        with gr.Row(elem_classes="centered-row"):
+            left_button = gr.Button("", icon="icons/left.png", elem_classes="square-button")
+            stop_button = gr.Button("", icon="icons/stop.png", elem_classes="square-button")
+            right_button = gr.Button("", icon="icons/right.png", elem_classes="square-button")
+        with gr.Row(elem_classes="centered-row"):
+            backward_button = gr.Button("", icon="icons/backward.png", elem_classes="square-button")
+
+    """
+    gr.Markdown("---")
+    gr.Markdown("<h2 align='center'>  左 《《《 升降电机 》》》 右 </h2>")
+    gr.Markdown("---")
+    with gr.Column():
+        with gr.Row(elem_classes="centered-row"):
+            up_left_button = gr.Button("", icon="icons/forward.png", elem_classes="square-button")
+            up_right_button = gr.Button("", icon="icons/forward.png", elem_classes="square-button")
+        with gr.Row(elem_classes="centered-row"):
+            stop_left_button = gr.Button("", icon="icons/stop.png", elem_classes="square-button")
+            stop_right_button = gr.Button("", icon="icons/stop.png", elem_classes="square-button")
+        with gr.Row(elem_classes="centered-row"):
+            down_left_button = gr.Button("", icon="icons/backward.png", elem_classes="square-button")
+            down_right_button = gr.Button("", icon="icons/backward.png", elem_classes="square-button")
+    """
+
+    gr.Markdown("---")
+    gr.Markdown("<h2 align='center'> 抓取动作 </h2>")
+    gr.Markdown("---")
 
     with gr.Column():
         with gr.Row():
@@ -100,32 +180,24 @@ with gr.Blocks() as demo:
             
         test_button = gr.Button("终止 CONTROL+C", size="lg", variant="primary")
 
-    connect_button.click(
-        fn=connect
-    )
+    """****************************************
+    *            按钮绑定函数                   *
+    ****************************************"""
 
-    move_grasp_button.click(
-        fn=move_grasp
-    )
-    only_grasp_button.click(
-        fn=only_grasp
-    )
-    grasp_slipper_button.click(
-        fn=grasp_slipper
-    )
-    putinto_basket_button.click(
-        fn=putinto_basket
-    )
-    putinto_trash_bin_button.click(
-        fn=putinto_trash_bin
-    )
-    putdown_button.click(
-        fn=putdown
-    )
-    test_button.click(
-        fn=interrupt
-    )
+    connect_button.click(fn=connect)
 
+    move_grasp_button.click(fn=move_grasp)
+    only_grasp_button.click(fn=only_grasp)
+    grasp_slipper_button.click(fn=grasp_slipper)
+    putinto_basket_button.click(fn=putinto_basket)
+    putinto_trash_bin_button.click(fn=putinto_trash_bin)
+    putdown_button.click(fn=putdown)
+    test_button.click(fn=interrupt)
+    forward_button.click(fn=wheel_forward)
+    backward_button.click(fn=wheel_backward)
+    left_button.click(fn=wheel_left)
+    right_button.click(fn=wheel_right)
+    stop_button.click(fn=wheel_stop)
 
     timer = gr.Timer(value=0.5)  # 每0.5秒检测一次是否连接
     timer.tick(
