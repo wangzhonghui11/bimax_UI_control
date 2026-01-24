@@ -16,6 +16,8 @@ from bimax_msgs.action import BimaxFunction
 from bimax_msgs.srv import MagnetControl, CatcherControl, MopControl
 from bimax_msgs.msg import JawCommand, RobotCommand  # 新增机械臂消息
 from bimax_msgs.msg import MotorCommand  # 用于RobotCommand的数组
+from std_srvs.srv import Trigger, SetBool  # 添加SetBool服务
+
 # 方法1: 使用FastDDS并增加缓冲区
 os.environ['RMW_IMPLEMENTATION'] = 'rmw_cyclonedds_cpp'
 # os.environ['RMW_FASTRTPS_USE_QOS_FROM_XML'] = '1'
@@ -326,6 +328,61 @@ class RobotController:
                 
         except Exception as e:
             return f"❌ 拖布异常: {desc} - {str(e)[:50]}"
+    def reset_motor_faults(self):
+        """重置电机错误并初始化错误码"""
+        if not self.node:
+            return "❌ 节点未就绪"
+        
+        try:
+            result_msgs = []
+            
+            # 1. 重置电机错误
+            request = self.node.Trigger.Request()
+            
+            # 先调用重置
+            if self.node.reset_client.service_is_ready():
+                future = self.node.reset_client.call_async(request)
+                rclpy.spin_until_future_complete(self.node, future, timeout_sec=2.0)
+                
+                if future.done():
+                    try:
+                        response = future.result()
+                        if response.success:
+                            result_msgs.append("✅ 电机错误重置成功")
+                        else:
+                            result_msgs.append(f"❌ 电机错误重置失败: {response.message}")
+                    except Exception as e:
+                        result_msgs.append(f"❌ 重置响应错误: {str(e)[:50]}")
+                else:
+                    result_msgs.append("❌ 重置服务调用超时")
+            else:
+                result_msgs.append("❌ 重置服务未就绪")
+            
+            time.sleep(0.2)  # 短暂延时
+            
+            # 2. 初始化错误码
+            if self.node.init_client.service_is_ready():
+                future = self.node.init_client.call_async(request)
+                rclpy.spin_until_future_complete(self.node, future, timeout_sec=2.0)
+                
+                if future.done():
+                    try:
+                        response = future.result()
+                        if response.success:
+                            result_msgs.append("✅ 错误码初始化成功")
+                        else:
+                            result_msgs.append(f"❌ 错误码初始化失败: {response.message}")
+                    except Exception as e:
+                        result_msgs.append(f"❌ 初始化响应错误: {str(e)[:50]}")
+                else:
+                    result_msgs.append("❌ 初始化服务调用超时")
+            else:
+                result_msgs.append("❌ 初始化服务未就绪")
+            
+            return "\n".join(result_msgs)
+                
+        except Exception as e:
+            return f"❌ 电机故障处理异常: {str(e)[:50]}"
     def send_action_command(self, command_name):
         """发送action命令"""
         if command_name not in self.command_grasp:
@@ -344,6 +401,53 @@ class RobotController:
         # future.add_done_callback(self.goal_response_callback)
         
         return f"📤 已发送: {command_name}"
+    def call_station_service(self, service_name, data_value=True, action_name=""):
+        """调用基站服务"""
+        desc = action_name if action_name else f"{service_name}控制"
+        
+        if not self.node:
+            return f"❌ 节点未就绪"
+        
+        try:
+            # 根据服务名称获取客户端
+            client = None
+            if service_name == "wash":
+                client = self.node.wash_client
+            elif service_name == "dust":
+                client = self.node.dust_client
+            elif service_name == "dry":
+                client = self.node.dry_client
+            else:
+                return f"❌ 未知服务: {service_name}"
+            
+            if not client or not client.service_is_ready():
+                return f"❌ {desc}服务未就绪"
+            
+            # 创建请求
+            request = SetBool.Request()
+            request.data = bool(data_value)
+            
+            # 调用服务
+            start_time = time.time()
+            future = client.call_async(request)
+            rclpy.spin_until_future_complete(self.node, future, timeout_sec=3.0)
+            elapsed = time.time() - start_time
+            
+            if future.done():
+                try:
+                    response = future.result()
+                    if response.success:
+                        return f"✅ {desc}成功 ({elapsed:.1f}s): 状态={'开启' if data_value else '关闭'}"
+                    else:
+                        error_msg = response.message if hasattr(response, 'message') else "未知错误"
+                        return f"❌ {desc}失败 ({elapsed:.1f}s): {error_msg}"
+                except Exception as e:
+                    return f"❌ {desc}响应错误 ({elapsed:.1f}s): {str(e)[:50]}"
+            else:
+                return f"❌ {desc}超时"
+                
+        except Exception as e:
+            return f"❌ {desc}异常: {str(e)[:50]}"
 class RobotNode(Node):
     def __init__(self, domain_id):
         super().__init__(f'robot_ctrl_{domain_id}')
@@ -364,9 +468,17 @@ class RobotNode(Node):
         
         self.CatcherControl = CatcherControl
         self.catcher_client = self.create_client(self.CatcherControl, '/catcher_control')
-        
+        self.Trigger = Trigger        
+        self.reset_client = self.create_client(self.Trigger, '/MotorFaultReset')
+        # 初始化服务客户端
+        self.init_client = self.create_client(self.Trigger, '/MotorFaultSet')       
         self.MopControl = MopControl
         self.mop_client = self.create_client(self.MopControl, '/mop_control')
+        # 基站服务
+        self.SetBool = SetBool
+        self.wash_client = self.create_client(self.SetBool, '/station/control/wash')
+        self.dust_client = self.create_client(self.SetBool, '/station/control/dust')
+        self.dry_client = self.create_client(self.SetBool, '/station/control/dry')
         # 等待服务连接
         self.wait_for_services()        
     def wait_for_services(self):
@@ -375,10 +487,15 @@ class RobotNode(Node):
             ("电磁铁", self.magnet_client),
             ("吸尘器", self.catcher_client),
             ("拖布", self.mop_client),
+            ("电机重置", self.reset_client),
+            ("电机初始化", self.init_client),
+            ("基站清洗", self.wash_client),
+            ("基站吸尘", self.dust_client),
+            ("基站干燥", self.dry_client),
         ]
         
         for name, client in services:
-            if client.wait_for_service(timeout_sec=0.2):
+            if client.wait_for_service(timeout_sec=0.1):
                 self.get_logger().info(f"✅ {name}服务已连接")
             else:
                 self.get_logger().warn(f"⚠️ {name}服务未连接")
@@ -488,7 +605,17 @@ with gr.Blocks() as demo:
                     arm_output = gr.Textbox("准备就绪", label="机械臂状态")
             
             gr.Markdown("---")
+            # 电机故障处理
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("### ⚙️ 电机故障处理")
+                    
+                    # with gr.Row():
+                    btn_motor_reset = gr.Button("🔄 重置并初始化电机", variant="primary")
+                    
+                motor_output = gr.Textbox("点击按钮重置电机错误并初始化", label="电机状态")
             
+            gr.Markdown("---")            
             # 机械臂动作控制
             with gr.Row():
                 with gr.Column(scale=1):
@@ -505,6 +632,48 @@ with gr.Blocks() as demo:
                         btn6 = gr.Button("放下", variant="primary")
                     
                     grasp_output = gr.Textbox("准备就绪", label="状态")
+        with gr.TabItem("🏠 基站控制"):
+            gr.Markdown("### 测试基站各项功能")
+            
+            # 清洗功能
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("### 🚿 清洗功能")
+                    
+                    with gr.Row():
+                        btn_wash_on = gr.Button("💦 开启清洗", variant="primary", size="lg")
+                        btn_wash_off = gr.Button("⏹️ 关闭清洗", variant="secondary", size="lg")
+                    
+                    wash_output = gr.Textbox("准备测试清洗功能", label="清洗状态")
+            
+            gr.Markdown("---")
+            
+            # 吸尘功能
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("### 🌪️ 吸尘功能")
+                    
+                    with gr.Row():
+                        btn_dust_on = gr.Button("🌀 开启吸尘", variant="primary", size="lg")
+                        btn_dust_off = gr.Button("⏹️ 关闭吸尘", variant="secondary", size="lg")
+                    
+                    dust_output = gr.Textbox("准备测试吸尘功能", label="吸尘状态")
+            
+            gr.Markdown("---")
+            
+            # 干燥功能
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("### 🔥 干燥功能")
+                    
+                    with gr.Row():
+                        btn_dry_on = gr.Button("🔥 开启干燥", variant="primary", size="lg")
+                        btn_dry_off = gr.Button("⏹️ 关闭干燥", variant="secondary", size="lg")
+                    
+                    dry_output = gr.Textbox("准备测试干燥功能", label="干燥状态")
+            
+            gr.Markdown("---")
+            
 
 # ... 事件绑定代码保持不变 ...
     # 事件绑定
@@ -539,10 +708,33 @@ with gr.Blocks() as demo:
     
     def arm_fold():
         """机械臂收臂"""
-        return controller.send_arm_fold("机械臂收臂")  
+        return controller.send_arm_fold("机械臂收臂") 
+
+    # 基站控制函数
+    def wash_on():
+        return controller.call_station_service("wash", True, "清洗功能")
+    
+    def wash_off():
+        return controller.call_station_service("wash", False, "清洗功能")
+    
+    def dust_on():
+        return controller.call_station_service("dust", True, "吸尘功能")
+    
+    def dust_off():
+        return controller.call_station_service("dust", False, "吸尘功能")
+    
+    def dry_on():
+        return controller.call_station_service("dry", True, "干燥功能")
+    
+    def dry_off():
+        return controller.call_station_service("dry", False, "干燥功能") 
     ping_btn.click(do_ping, outputs=ping_status)
     
     # 关键修复：switch_btn点击时，输出到status和robot_select
+    btn_motor_reset.click(
+        lambda: controller.reset_motor_faults(),
+        outputs=motor_output
+    )
     switch_btn.click(
         switch,
         inputs=robot_select,
@@ -577,6 +769,13 @@ with gr.Blocks() as demo:
     # 夹爪控制
     btn_jaw_close.click(jaw_close, outputs=jaw_output)
     btn_jaw_open.click(jaw_open, outputs=jaw_output)
+    # 基站控制页面
+    btn_wash_on.click(wash_on, outputs=wash_output)
+    btn_wash_off.click(wash_off, outputs=wash_output)
+    btn_dust_on.click(dust_on, outputs=dust_output)
+    btn_dust_off.click(dust_off, outputs=dust_output)
+    btn_dry_on.click(dry_on, outputs=dry_output)
+    btn_dry_off.click(dry_off, outputs=dry_output)
      # 绑定事件
     btn1.click(lambda: controller.send_action_command("move_grasp"), outputs=grasp_output)
     btn2.click(lambda: controller.send_action_command("only_grasp"), outputs=grasp_output)
