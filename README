@@ -1,0 +1,209 @@
+SSH ROS2 机械臂控制 Web 界面
+
+这是一个基于 Web 的 ROS2 机械臂控制界面，通过 SSH 连接到远程机器人并发送控制指令。
+
+功能特性
+
+• 🌐 Web 界面：通过浏览器访问的图形化控制界面
+
+• 🔌 多机器人支持：支持切换不同机器人（ROBOT4、ROBOT5、ROBOT6）
+
+• 🔄 实时连接状态：每0.5秒检测一次 SSH 连接状态
+
+• 🎮 多种控制功能：
+
+  • 移动并抓取 (move&grasp)
+
+  • 仅抓取 (onlygrasp)
+
+  • 抓取拖鞋 (grasp_slipper)
+
+  • 放入篮子 (putinto_basket)
+
+  • 放入垃圾桶 (putinto_trash_bin)
+
+  • 放下 (put_down)
+
+  • 终止操作 (CONTROL+C)
+
+系统要求
+
+• Python 3.7+
+
+• ROS2（在远程机器人上运行）
+
+• 网络连接
+
+安装步骤
+
+1. 克隆或下载项目文件
+
+git clone <repository-url>
+cd <project-directory>
+
+
+2. 安装 Python 依赖
+
+pip install paramiko gradio
+
+
+或者使用 requirements.txt：
+pip install -r requirements.txt
+
+
+3. 配置文件
+
+确保项目包含以下文件：
+• main.py - 主程序文件
+
+• ssh.py - SSH 客户端类文件
+
+• 机器人配置文件（如果需要）
+
+使用方法
+
+启动 Web 界面
+
+python3 pad.py
+
+
+访问界面
+
+1. 在浏览器中打开：http://localhost:7860
+2. 如果从其他设备访问，使用服务器的 IP 地址：http://<服务器IP>:7860
+
+操作步骤
+
+1. 选择机器人：从下拉菜单中选择要控制的机器人
+2. 连接：点击"连接"按钮建立 SSH 连接
+3. 控制操作：点击相应的控制按钮发送指令
+4. 终止操作：如需要中断当前操作，点击"终止 CONTROL+C"
+
+机器人配置
+
+默认机器人设置
+
+ROBOT4: 192.168.2.196
+ROBOT5: 192.168.2.197
+ROBOT6: 192.168.2.198
+
+
+用户名和密码
+
+• 用户名：bimax
+
+• 密码：123
+
+修改配置
+
+要修改机器人配置，编辑 pad.py 文件中的以下部分：
+# 修改机器人列表
+dropdown = gr.Dropdown(
+    choices=[
+        ("机器人1", "192.168.1.100"),
+        ("机器人2", "192.168.1.101"),
+    ],
+    # ...
+)
+
+# 修改默认IP
+ip = "192.168.2.196"
+
+# 修改用户名密码
+user = "your_username"
+password = "your_password"
+
+
+ROS2 接口说明
+
+控制命令格式
+
+系统通过 ROS2 action 接口发送控制命令：
+
+ros2 action send_goal /function/arm/grasp bimax_msgs/action/BimaxFunction "{command: '控制指令'}"
+
+
+可用指令
+
+• move&grasp_all - 移动并抓取
+
+• onlygrasp_all - 仅抓取
+
+• grasp_slipper - 抓取拖鞋
+
+• putinto_basket - 放入篮子
+
+• putinto_trash_bin - 放入垃圾桶
+
+• put_down - 放下
+
+项目结构
+
+
+project/
+├── pad.py              # 主程序文件
+├── ssh.py              # SSH 客户端类
+└── README.md          # 说明文档
+
+
+故障排除
+
+常见问题
+
+1. 连接失败
+   • 检查网络连接
+
+   • 确认机器人 IP 地址正确
+
+   • 确认用户名和密码正确
+
+   • 检查防火墙设置
+
+2. SSH 认证错误
+   • 确认机器人 SSH 服务已启动
+
+   • 确认用户名有 SSH 访问权限
+
+3. 控制指令无响应
+   • 检查 ROS2 是否在机器人上运行
+
+   • 确认 action 服务名称正确
+
+   • 检查机器人是否处于可控制状态
+
+日志查看
+
+启动程序时会显示连接状态和错误信息，请根据提示进行排查。
+
+安全注意事项
+
+⚠️ 重要安全提示 ⚠️
+
+1. 修改默认密码：生产环境中请修改默认 SSH 密码
+2. 网络隔离：建议在专用网络中运行
+3. 访问控制：限制可连接到此 Web 界面的设备
+4. 日志记录：记录所有控制操作以便审计
+5. 紧急停止：确保有物理紧急停止机制
+
+开发说明
+
+扩展功能
+
+要添加新的控制功能：
+1. 在 main.py 中添加新的按钮和处理函数
+2. 更新 ros2_command 变量以支持新指令
+3. 在 Web 界面中添加相应的按钮
+
+自定义界面
+
+使用 Gradio 的组件可以轻松修改界面布局和样式，参考 https://www.gradio.app。
+
+许可证
+
+[在此添加许可证信息]
+
+技术支持
+
+如有问题，请提交 Issue 或联系开发团队。
+
+注意：使用本系统前，请确保已接受相关安全培训，并了解机械臂操作的基本安全规程。

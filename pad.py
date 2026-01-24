@@ -64,25 +64,36 @@ def interrupt():
 
 def wheel_forward():
     global ssh
-    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'"
+    cmd = """
+        # 查找telep.p程序的PID
+        PID=$(ps aux | grep "python3 telep.py" | grep -v grep | awk '{print $2}')
+        
+        if [ -n "$PID" ]; then
+            echo "找到teleop进程PID: $PID"
+            # 发送w键
+            echo -n 'w' > /proc/$PID/fd/0
+            echo "已发送w键"
+        else
+            echo "未找到teleop进程"
+        """
     if ssh.is_connected():
         ssh.run_shell(cmd)
 
 def wheel_backward():
     global ssh
-    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: -0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'"
+    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: -0.05, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}'"
     if ssh.is_connected():
         ssh.run_shell(cmd)
 
 def wheel_right():
     global ssh
-    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: -0.1745}}'"
+    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: -0.085}}'"
     if ssh.is_connected():
         ssh.run_shell(cmd)
 
 def wheel_left():
     global ssh
-    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.1745}}'"
+    cmd = "ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.085}}'"
     if ssh.is_connected():
         ssh.run_shell(cmd)
 
@@ -118,6 +129,7 @@ with gr.Blocks(css="""
                 ("ROBOT4", "192.168.2.196"),
                 ("ROBOT5", "192.168.2.197"),
                 ("ROBOT6", "192.168.2.198"),
+                ("ROBOT7", "192.168.2.199"),
             ],
             value="ROBOT4",
             info="选择要连接的机器",
