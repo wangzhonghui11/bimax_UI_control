@@ -3,7 +3,7 @@
 主程序入口
 """
 
-from ui_interface import RobotUI
+from scripts.ui_interface import RobotUI
 
 def main():
     """主函数"""

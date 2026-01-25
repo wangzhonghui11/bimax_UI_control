@@ -1,209 +1,254 @@
-SSH ROS2 机械臂控制 Web 界面
+🤖 机器人远程控制系统
 
-这是一个基于 Web 的 ROS2 机械臂控制界面，通过 SSH 连接到远程机器人并发送控制指令。
+📋 项目简介
 
-功能特性
+一个基于ROS2和Gradio的机器人远程控制系统，支持多机器人切换、硬件控制、基站管理等功能。
 
-• 🌐 Web 界面：通过浏览器访问的图形化控制界面
+🎯 主要功能
 
-• 🔌 多机器人支持：支持切换不同机器人（ROBOT4、ROBOT5、ROBOT6）
+🎮 基础控制
 
-• 🔄 实时连接状态：每0.5秒检测一次 SSH 连接状态
+• 机器人选择：支持多台机器人切换
 
-• 🎮 多种控制功能：
+• 网络检测：实时Ping测试机器人连接状态
 
-  • 移动并抓取 (move&grasp)
+• 基础状态：显示机器人连接状态
 
-  • 仅抓取 (onlygrasp)
+🔧 硬件控制检测
 
-  • 抓取拖鞋 (grasp_slipper)
+• 轮组控制：前进、后退、左转、右转、停止
 
-  • 放入篮子 (putinto_basket)
+• 电磁铁控制：充磁/退磁
 
-  • 放入垃圾桶 (putinto_trash_bin)
+• 吸尘器控制：开启/关闭
 
-  • 放下 (put_down)
+• 拖布控制：开启/关闭
 
-  • 终止操作 (CONTROL+C)
+• 夹爪控制：开合控制
 
-系统要求
+• 机械臂控制：回零/收臂
 
-• Python 3.7+
+• 电机故障处理：重置电机错误并初始化错误码
 
-• ROS2（在远程机器人上运行）
+• 机械臂动作控制：多种预设动作
 
-• 网络连接
+🏠 基站控制
 
-安装步骤
+• 清洗功能：开启/关闭基站清洗
 
-1. 克隆或下载项目文件
+• 吸尘功能：开启/关闭基站吸尘
 
-git clone <repository-url>
-cd <project-directory>
+• 干燥功能：开启/关闭基站干燥
 
-
-2. 安装 Python 依赖
-
-pip install paramiko gradio
+📁 项目结构
 
 
-或者使用 requirements.txt：
+robot_control_system/
+├── main.py                    # 主程序入口
+├── config.py                  # 配置参数
+├── robot_controller.py        # 机器人控制器类
+├── robot_node.py             # ROS2节点类
+├── ui_interface.py           # 界面构建
+└── requirements.txt          # 依赖包
+
+
+🔧 快速开始
+
+1. 环境要求
+
+• Python 3.8+
+
+• ROS2 Foxy/Humble
+
+• Ubuntu 20.04/22.04
+
+2. 安装依赖
+
+# 安装系统依赖
+sudo apt-get update
+sudo apt-get install python3-pip
+
+# 安装Python依赖
 pip install -r requirements.txt
 
 
-3. 配置文件
+3. 配置机器人
 
-确保项目包含以下文件：
-• main.py - 主程序文件
-
-• ssh.py - SSH 客户端类文件
-
-• 机器人配置文件（如果需要）
-
-使用方法
-
-启动 Web 界面
-
-python3 pad.py
+在 config.py 中配置机器人信息：
+ROBOTS = {
+    "ROBOT0 (DOMAIN=0)": {"domain": "0", "ip": "192.0.0.0"},
+    "ROBOT7 (DOMAIN=80)": {"domain": "80", "ip": "192.168.0.107"},
+    # 添加更多机器人...
+}
 
 
-访问界面
+4. 运行系统
 
-1. 在浏览器中打开：http://localhost:7860
-2. 如果从其他设备访问，使用服务器的 IP 地址：http://<服务器IP>:7860
-
-操作步骤
-
-1. 选择机器人：从下拉菜单中选择要控制的机器人
-2. 连接：点击"连接"按钮建立 SSH 连接
-3. 控制操作：点击相应的控制按钮发送指令
-4. 终止操作：如需要中断当前操作，点击"终止 CONTROL+C"
-
-机器人配置
-
-默认机器人设置
-
-ROBOT4: 192.168.2.196
-ROBOT5: 192.168.2.197
-ROBOT6: 192.168.2.198
+# 启动控制界面
+python main.py
 
 
-用户名和密码
+5. 访问界面
 
-• 用户名：bimax
+打开浏览器访问：http://localhost:7860
 
-• 密码：123
+🚀 功能说明
 
-修改配置
+机器人切换
 
-要修改机器人配置，编辑 pad.py 文件中的以下部分：
-# 修改机器人列表
-dropdown = gr.Dropdown(
-    choices=[
-        ("机器人1", "192.168.1.100"),
-        ("机器人2", "192.168.1.101"),
-    ],
-    # ...
-)
+1. 在"基础控制"页面选择目标机器人
+2. 点击"切换"按钮
+3. 系统会自动重新连接并切换机器人
 
-# 修改默认IP
-ip = "192.168.2.196"
+硬件测试
 
-# 修改用户名密码
-user = "your_username"
-password = "your_password"
+1. 进入"硬件控制检测"页面
+2. 根据需要测试各项硬件功能
+3. 所有操作都有状态反馈
 
+基站控制
 
-ROS2 接口说明
+1. 进入"基站控制"页面
+2. 测试清洗、吸尘、干燥功能
+3. 支持独立控制每个功能
 
-控制命令格式
+⚙️ 配置说明
 
-系统通过 ROS2 action 接口发送控制命令：
+服务配置
 
-ros2 action send_goal /function/arm/grasp bimax_msgs/action/BimaxFunction "{command: '控制指令'}"
-
-
-可用指令
-
-• move&grasp_all - 移动并抓取
-
-• onlygrasp_all - 仅抓取
-
-• grasp_slipper - 抓取拖鞋
-
-• putinto_basket - 放入篮子
-
-• putinto_trash_bin - 放入垃圾桶
-
-• put_down - 放下
-
-项目结构
+在 config.py 中配置ROS2服务名称：
+SERVICE_NAMES = {
+    "magnet": "/magnet_control",      # 电磁铁控制
+    "catcher": "/catcher_control",     # 吸尘器控制
+    "mop": "/mop_control",            # 拖布控制
+    # 更多服务...
+}
 
 
-project/
-├── pad.py              # 主程序文件
-├── ssh.py              # SSH 客户端类
-└── README.md          # 说明文档
+话题配置
+
+配置ROS2话题名称：
+TOPIC_NAMES = {
+    "cmd_vel": "/cmd_vel",               # 速度控制
+    "gripper": "/gripper_position",      # 夹爪控制
+    "arm_command": "/bimaxArmCommandValues",  # 机械臂控制
+}
 
 
-故障排除
+🔌 ROS2接口说明
+
+已实现的服务接口
+
+• /magnet_control - 电磁铁控制
+
+• /catcher_control - 吸尘器控制
+
+• /mop_control - 拖布控制
+
+• /MotorFaultReset - 电机错误重置
+
+• /MotorFaultSet - 错误码初始化
+
+• /station/control/wash - 基站清洗
+
+• /station/control/dust - 基站吸尘
+
+• /station/control/dry - 基站干燥
+
+• /function/arm/grasp - 机械臂动作
+
+已实现的话题接口
+
+• /cmd_vel - 速度控制
+
+• /gripper_position - 夹爪位置
+
+• /bimaxArmCommandValues - 机械臂命令
+
+🐛 故障排除
 
 常见问题
 
-1. 连接失败
+1. 机器人连接失败
    • 检查网络连接
 
-   • 确认机器人 IP 地址正确
+   • 确认机器人IP地址正确
 
-   • 确认用户名和密码正确
+   • 确认ROS2服务正常运行
 
-   • 检查防火墙设置
+2. 服务调用失败
+   • 检查服务名称是否正确
 
-2. SSH 认证错误
-   • 确认机器人 SSH 服务已启动
+   • 确认服务已启动
 
-   • 确认用户名有 SSH 访问权限
+   • 检查ROS_DOMAIN_ID设置
 
-3. 控制指令无响应
-   • 检查 ROS2 是否在机器人上运行
+3. 界面无响应
+   • 检查端口7860是否被占用
 
-   • 确认 action 服务名称正确
+   • 查看日志输出
 
-   • 检查机器人是否处于可控制状态
+   • 重启应用
 
 日志查看
 
-启动程序时会显示连接状态和错误信息，请根据提示进行排查。
+# 查看ROS2日志
+ros2 topic list
+ros2 service list
 
-安全注意事项
 
-⚠️ 重要安全提示 ⚠️
+📱 界面截图
 
-1. 修改默认密码：生产环境中请修改默认 SSH 密码
-2. 网络隔离：建议在专用网络中运行
-3. 访问控制：限制可连接到此 Web 界面的设备
-4. 日志记录：记录所有控制操作以便审计
-5. 紧急停止：确保有物理紧急停止机制
+基础控制界面
 
-开发说明
+• 机器人选择和网络测试
 
-扩展功能
+• 连接状态显示
 
-要添加新的控制功能：
-1. 在 main.py 中添加新的按钮和处理函数
-2. 更新 ros2_command 变量以支持新指令
-3. 在 Web 界面中添加相应的按钮
+硬件控制界面
 
-自定义界面
+• 轮组控制面板
 
-使用 Gradio 的组件可以轻松修改界面布局和样式，参考 https://www.gradio.app。
+• 各硬件模块独立控制
 
-许可证
+• 状态实时反馈
 
-[在此添加许可证信息]
+基站控制界面
 
-技术支持
+• 三大功能独立控制
 
-如有问题，请提交 Issue 或联系开发团队。
+• 批量控制选项
 
-注意：使用本系统前，请确保已接受相关安全培训，并了解机械臂操作的基本安全规程。
+• 状态监控
+
+🔄 更新日志
+
+v1.0.0
+
+• 初始版本发布
+
+• 支持多机器人切换
+
+• 实现基本硬件控制
+
+• 添加基站控制功能
+
+📄 许可证
+
+本项目基于 MIT 许可证开源。
+
+👥 贡献指南
+
+欢迎提交 Issue 和 Pull Request！
+
+1. Fork 本仓库
+2. 创建特性分支
+3. 提交更改
+4. 推送到分支
+5. 创建 Pull Request
+
+📧 联系信息
+
+如有问题或建议，请联系项目维护者。
+
+注意: 使用本系统前请确保已获得相应权限，并遵守相关安全规范。

@@ -3,17 +3,18 @@
 机器人控制器类 - 主要业务逻辑
 """
 
+import datetime
 import os
 import rclpy
 import threading
 import subprocess
 import time
-from robot_node import RobotNode
+from .robot_node import RobotNode
 from bimax_msgs.action import BimaxFunction
 from bimax_msgs.srv import MagnetControl, CatcherControl, MopControl
-from bimax_msgs.msg import JawCommand, RobotCommand, MotorCommand
-from std_srvs.srv import Trigger, SetBool
-from config import ROBOTS, GRASP_COMMANDS, MOVEMENT_COMMANDS, ARM_PARAMS, JAW_PARAMS, ROS_CONFIG
+from bimax_msgs.msg import JawCommand, RobotCommand, MotorCommand, RobotState, MotorState
+from std_srvs.srv import Trigger, SetBool,Empty
+from .config import ROBOTS, GRASP_COMMANDS, MOVEMENT_COMMANDS, ARM_PARAMS, JAW_PARAMS, ROS_CONFIG
 
 
 class RobotController:
@@ -22,9 +23,9 @@ class RobotController:
         for key, value in ROS_CONFIG.items():
             os.environ[key] = value
         
-        self.current_robot = "ROBOT0 (DOMAIN=0)"
-        self.domain_id = "0"
-        self.ip = "192.0.0.0"
+        self.current_robot = "ROBOT7 (DOMAIN=0)"
+        self.domain_id = "80"
+        self.ip = "192.168.0.107"
         self.node = None
         self.setup_ros2()
         self.command_grasp = GRASP_COMMANDS
@@ -66,7 +67,48 @@ class RobotController:
             self.setup_ros2()
             return f"✅ 已切换到: {robot_name}"
         return f"❌ 切换失败"
-    
+    def get_simple_robot_status(self):
+        """获取简化的机器人状态"""
+        if not self.node:
+            return "❌ 节点未就绪"
+        
+        try:
+            robot_state = self.node.get_robot_state()
+            
+            if robot_state is None:
+                return "⏳ 等待机器人状态数据..."
+            
+            lines = []
+            lines.append(f"🕐 更新时间: {datetime.now().strftime('%H:%M:%S')}")
+            lines.append("")
+            
+            # 电机命名
+            motor_names = ["左升降", "左臂1", "左臂2", "左臂3", "右升降", "右臂1", "右臂2", "右臂3"]
+            
+            for i, motor in enumerate(robot_state.motor_state):
+                motor_name = motor_names[i] if i < len(motor_names) else f"电机{i}"
+                
+                if motor.error_id == 0:
+                    status = "🟢"
+                elif motor.error_id == -1:
+                    status = "⚪"
+                else:
+                    status = f"🔴{motor.error_id}"
+                
+                lines.append(f"{motor_name}: 位置={motor.q:.3f}  {status}")
+            
+            # 统计
+            total = len(robot_state.motor_state)
+            normal = sum(1 for m in robot_state.motor_state if m.error_id == 0)
+            errors = sum(1 for m in robot_state.motor_state if m.error_id != 0)
+            
+            lines.append("")
+            lines.append(f"📈 正常: {normal}/{total}, 故障: {errors}/{total}")
+            
+            return "\n".join(lines)
+            
+        except Exception as e:
+            return f"❌ 获取状态异常: {str(e)[:50]}"    
     def send_arm_command(self, command_type, action_name=""):
         """发送机械臂控制命令"""
         if not self.node:
@@ -362,3 +404,99 @@ class RobotController:
                 
         except Exception as e:
             return f"❌ {desc}异常: {str(e)[:50]}"
+    def save_camera_images(self, action_name="保存相机图像"):
+        """调用相机保存图像服务"""
+        if not self.node:
+            return f"❌ 节点未就绪"
+        
+        try:
+            if not self.node.camera_save_client or not self.node.camera_save_client.service_is_ready():
+                return f"❌ 相机保存服务未就绪"
+            
+            # 创建请求
+            request = Empty.Request()
+            
+            # 调用服务
+            start_time = time.time()
+            future = self.node.camera_save_client.call_async(request)
+            rclpy.spin_until_future_complete(self.node, future, timeout_sec=3.0)
+            elapsed = time.time() - start_time
+            
+            if future.done():
+                try:
+                    response = future.result()
+                    # Empty服务通常返回空响应，但我们可以检查是否成功调用
+                    self.node.get_logger().info(f"相机保存命令已调用，耗时: {elapsed:.1f}s")
+                    return f"✅ {action_name}成功 ({elapsed:.1f}s)"
+                except Exception as e:
+                    return f"❌ 相机保存响应错误 ({elapsed:.1f}s): {str(e)[:50]}"
+            else:
+                return f"❌ 相机保存服务调用超时"
+                
+        except Exception as e:
+            return f"❌ 相机保存异常: {str(e)[:50]}"
+        # 相机处理器在节点初始化时自动创建
+    
+    def capture_camera_image(self, camera_type=None, resize_width=None):
+        """捕获相机图像 - 接口方法"""
+        if not self.node or not self.node.camera_handler:
+            return "❌ 相机处理器未就绪", None, None
+        
+        try:
+            success, message, base64_data, cv_image = self.node.camera_handler.capture_single_image(
+                camera_type=camera_type,
+                resize_width=resize_width
+            )
+            
+            if success:
+                return f"✅ {message}", base64_data, cv_image
+            else:
+                return f"❌ {message}", base64_data, cv_image
+                
+        except Exception as e:
+            error_msg = f"❌ 捕获异常: {str(e)[:50]}"
+            return error_msg, None, None
+    
+    def capture_and_save_image(self, camera_type=None, save_dir=None, filename=None, resize_width=None):
+        """捕获并保存图像 - 接口方法"""
+        if not self.node or not self.node.camera_handler:
+            return "❌ 相机处理器未就绪", None, None, None
+        
+        try:
+            success, message, base64_data, file_path = self.node.camera_handler.capture_and_save(
+                camera_type=camera_type,
+                save_dir=save_dir,
+                filename=filename,
+                resize_width=resize_width
+            )
+            
+            if success:
+                return f"✅ {message}", base64_data, None, file_path
+            else:
+                return f"❌ {message}", base64_data, None, file_path
+                
+        except Exception as e:
+            error_msg = f"❌ 捕获异常: {str(e)[:50]}"
+            return error_msg, None, None, None
+    
+    def get_camera_status(self):
+        """获取相机状态 - 接口方法"""
+        if not self.node or not self.node.camera_handler:
+            return {"initialized": False, "message": "相机处理器未就绪"}
+        
+        try:
+            status = self.node.camera_handler.get_status()
+            status["initialized"] = True
+            return status
+        except Exception as e:
+            return {
+                "initialized": False,
+                "message": f"获取状态异常: {str(e)[:50]}"
+            }
+    
+    def get_last_camera_image(self):
+        """获取最后捕获的图像 - 接口方法"""
+        if not self.node or not self.node.camera_handler:
+            return None
+        
+        return self.node.camera_handler.get_last_capture()
