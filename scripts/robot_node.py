@@ -15,6 +15,7 @@ from std_srvs.srv import Trigger, SetBool ,Empty
 from .config import SERVICE_NAMES, TOPIC_NAMES
 import threading
 from .camera_handler import CameraHandler
+from .command_handler import CommandHandler  # 导入命令处理器
 
 class RobotNode(Node):
     def __init__(self, domain_id):
@@ -33,9 +34,9 @@ class RobotNode(Node):
         # 添加相机处理器
         self.camera_handler = None
         self._init_camera_handler() 
-
+        self.command_handler = CommandHandler(self)
         # 超时设置（秒）
-        self.state_timeout = 2.0  # 2秒超时      
+        self.state_timeout = 0.1  # 2秒超时      
         # 等待服务连接
         self.wait_for_services()
     def _init_camera_handler(self):
@@ -73,13 +74,11 @@ class RobotNode(Node):
         self.wash_client = self.create_client(SetBool, SERVICE_NAMES['wash'])
         self.dust_client = self.create_client(SetBool, SERVICE_NAMES['dust'])
         self.dry_client = self.create_client(SetBool, SERVICE_NAMES['dry'])
-        # 相机服务（新增）
-        self.camera_save_client = self.create_client(Empty, SERVICE_NAMES['camera_save'])   
     def _init_action_clients(self):
         """初始化Action客户端"""
         self.action_client = ActionClient(self, BimaxFunction, SERVICE_NAMES['grasp_action'])
         self.get_logger().info("等待action服务器...")
-        self.action_client.wait_for_server(timeout_sec=1.0)
+        self.action_client.wait_for_server(timeout_sec=0.1)
         self.get_logger().info("✅ Action服务器已连接")
     def _robot_state_callback(self, msg):
         """机器人状态回调函数"""
@@ -117,11 +116,10 @@ class RobotNode(Node):
             ("基站清洗", self.wash_client),
             ("基站吸尘", self.dust_client),
             ("基站干燥", self.dry_client),
-            ("相机保存", self.camera_save_client),  # 新增
         ]
         
         for name, client in services:
-            if client.wait_for_service(timeout_sec=0.1):
+            if client.wait_for_service(timeout_sec=0.01):
                 self.get_logger().info(f"✅ {name}服务已连接")
             else:
                 self.get_logger().info(f"✅ {name}服务已连接")

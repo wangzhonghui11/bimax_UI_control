@@ -48,8 +48,7 @@ class RobotUI:
         self.arm_fold = lambda: self.controller.send_arm_fold("机械臂收臂")
         
         # 电机故障重置
-        self.motor_reset = lambda: self.controller.reset_motor_faults()
-        self.camera_save = lambda: self.controller.save_camera_images("保存相机图像")        
+        self.motor_reset = lambda: self.controller.reset_motor_faults()     
         # 移动控制
         self.move_forward = lambda: self.controller.send_cmd("forward")
         self.move_backward = lambda: self.controller.send_cmd("backward")
@@ -72,6 +71,41 @@ class RobotUI:
         self.dust_off = lambda: self.controller.call_station_service("dust", False, "吸尘功能")
         self.dry_on = lambda: self.controller.call_station_service("dry", True, "干燥功能")
         self.dry_off = lambda: self.controller.call_station_service("dry", False, "干燥功能")
+            # ========== 通用功能 ==========
+        self.send_cancel = lambda: self.controller.send_cancel()
+        self.send_back = lambda: self.controller.send_back()
+        self.send_vac_place = lambda: self.controller.send_vac_place()
+        self.send_vac_take = lambda: self.controller.send_vac_take()
+        self.send_mop_place = lambda: self.controller.send_mop_place()
+        self.send_mop_take = lambda: self.controller.send_mop_take()
+        self.send_mop_clean = lambda: self.controller.send_mop_clean()
+        
+        # ========== 1号场地（主持人） ==========
+        self.send_show = lambda: self.controller.send_show()
+        self.send_pick = lambda: self.controller.send_pick()
+        self.send_pick_slipper = lambda: self.controller.send_pick_slipper()
+        self.send_vac = lambda: self.controller.send_vac()
+        self.send_change_mop = lambda: self.controller.send_change_mop()
+        self.send_mop = lambda: self.controller.send_mop()
+        
+        # ========== 2号场地（巡航抓取清洁） ==========
+        self.send_patrol_pick_clean = lambda: self.controller.send_patrol_pick_clean()
+        self.send_patrol_pick = lambda: self.controller.send_patrol_pick()
+        self.send_patrol_clean = lambda: self.controller.send_patrol_clean()
+        self.send_patrol_vac = lambda: self.controller.send_patrol_vac()
+        self.send_patrol_mop = lambda: self.controller.send_patrol_mop()
+        
+        # ========== 3号场地（复杂场景） ==========
+        self.send_complex_clean = lambda: self.controller.send_complex_clean()
+        self.send_complex_1_clean = lambda: self.controller.send_complex_1_clean()
+        self.send_complex_2_clean = lambda: self.controller.send_complex_2_clean()
+        self.send_complex_3_clean = lambda: self.controller.send_complex_3_clean()
+        
+        # ========== 4号场地（大面清洁） ==========
+        self.send_whole_clean = lambda: self.controller.send_whole_clean()
+        self.send_whole_vac = lambda: self.controller.send_whole_vac()
+        self.send_whole_mop = lambda: self.controller.send_whole_mop()
+        self.send_edge_mop = lambda: self.controller.send_edge_mop()     
     
     def create_ui(self):
         """创建用户界面"""
@@ -84,9 +118,6 @@ class RobotUI:
                 
                 # 硬件控制检测页面
                 self._create_hardware_control_tab()
-                
-                # 基站控制页面
-                self._create_station_control_tab()
 
                 self._create_status_monitor_tab()                
             # 绑定事件
@@ -94,7 +125,22 @@ class RobotUI:
             
             # 页面加载时自动ping
             demo.load(self.do_ping, outputs=self.ping_status)
-        
+            # 设置自动刷新
+            if hasattr(self, 'status_auto_state') and hasattr(self, 'status_refresh_interval'):
+                # 获取间隔值
+                interval = 3
+                if hasattr(self.status_refresh_interval, 'value'):
+                    interval = self.status_refresh_interval.value
+                
+                # 设置自动刷新
+                demo.load(
+                    fn=lambda: self.status_auto_refresh_check(
+                        self.status_auto_state.value if hasattr(self.status_auto_state, 'value') else False,
+                        interval
+                    ),
+                    outputs=self.status_all_outputs,
+                    every=interval
+                )        
         return demo
     def _create_status_monitor_tab(self):
         """创建状态监控页面（包含相机控制）"""
@@ -162,6 +208,8 @@ class RobotUI:
             # 局部变量，用于线程
             running = False
             auto_refresh_thread = None
+            last_refresh_time = 0  # 添加这个
+            refresh_counter = 0    # 添加这个
             
             def refresh_status_func():
                 """刷新所有电机状态"""
@@ -219,21 +267,26 @@ class RobotUI:
             
             def start_auto_refresh_func(interval):
                 """开始自动刷新"""
-                nonlocal running, auto_refresh_thread
+                nonlocal running, auto_refresh_thread, last_refresh_time
                 running = True
+                last_refresh_time = time.time()  # 记录开始时间
                 
                 def auto_refresh_worker():
+                    nonlocal last_refresh_time
                     while running:
-                        statuses = refresh_status_func()
-                        if len(statuses) >= 9:
-                            # 这里需要更新UI，但由于线程限制，我们只能通过Gradio的事件系统
-                            # 实际应该通过状态变化触发，这里简化处理
-                            pass
-                        time.sleep(interval)
+                        current_time = time.time()
+                        # 检查是否到达刷新间隔
+                        if current_time - last_refresh_time >= interval:
+                            last_refresh_time = current_time
+                            # 这里无法直接更新UI，但我们可以打印日志
+                            # print(f"[自动刷新] {time.strftime('%H:%M:%S')} 间隔: {interval}秒")
+                        time.sleep(1)  # 每秒检查一次
                 
                 auto_refresh_thread = threading.Thread(target=auto_refresh_worker, daemon=True)
                 auto_refresh_thread.start()
-                return "✅ 自动刷新已启动"
+                
+                # 立即执行一次刷新
+                return refresh_status_func()  # 这里返回刷新结果
             
             def stop_auto_refresh_func():
                 """停止自动刷新"""
@@ -247,22 +300,106 @@ class RobotUI:
             btn_refresh_status.click(
                 refresh_status_func,
                 outputs=motor_status_components + [status_summary]
-            )
-            
+            )         
             btn_start_auto_refresh.click(
                 lambda interval: start_auto_refresh_func(interval),
                 inputs=refresh_interval,
-                outputs=status_summary
+                outputs=motor_status_components + [status_summary]  # 输出到所有组件
             )
             
             btn_stop_auto_refresh.click(
-                stop_auto_refresh_func,
+                stop_auto_refresh_func, 
                 outputs=status_summary
-            )
-        
+            ) 
+    def _create_command_control_tab(self):
+            gr.Markdown("# 🚀 场景命令控制")
+            
+            with gr.Tabs():
+                # ========== 通用功能 ==========
+                with gr.TabItem("🔧 通用功能"):
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            gr.Markdown("### 🚨 紧急控制")
+                            self.btn_cancel = gr.Button("⏹️ 停止动作", variant="stop", size="lg")
+                            self.btn_back = gr.Button("🏠 回到中央", variant="primary", size="lg")
+                            self.general_output = gr.Textbox("准备发送命令", label="状态", lines=2)
+                        
+                        with gr.Column(scale=1):
+                            gr.Markdown("### 🧰 工具取放")
+                            with gr.Row():
+                                self.btn_vac_take = gr.Button("🤲 取吸尘器", variant="primary")
+                                self.btn_vac_place = gr.Button("📦 放吸尘器", variant="secondary")
+                            with gr.Row():
+                                self.btn_mop_take = gr.Button("🤲 取拖布", variant="primary")
+                                self.btn_mop_place = gr.Button("📦 放拖布", variant="secondary")
+                            self.btn_mop_clean = gr.Button("🚿 洗拖布", variant="primary")
+                            self.tool_output = gr.Textbox("准备操作工具", label="工具状态", lines=2)
+                
+                # ========== 1号场地（主持人） ==========
+                with gr.TabItem("🎤 1号场地（主持人）"):
+                    gr.Markdown("### 🎤 主持人演示流程")
+                    
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            self.btn_show = gr.Button("🎭 开场展示", variant="primary", size="lg")
+                            self.btn_pick = gr.Button("🛋️ 抓物品", variant="primary")
+                            self.btn_pick_slipper = gr.Button("👞 抓拖鞋", variant="primary")
+                        
+                        with gr.Column(scale=1):
+                            self.btn_vac = gr.Button("🌀 识别吸尘", variant="primary", size="lg")
+                            self.btn_change_mop = gr.Button("🔄 换拖布", variant="secondary")
+                            self.btn_mop = gr.Button("🧹 识别擦拭", variant="primary")
+                    
+                    self.area1_output = gr.Textbox("准备执行1号场地命令", label="状态", lines=3)
+                
+                # ========== 2号场地（巡航抓取清洁） ==========
+                with gr.TabItem("🔄 2号场地（巡航）"):
+                    gr.Markdown("### 🔄 巡航抓取清洁")
+                    
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            self.btn_patrol_pick_clean = gr.Button("🔄 全流程", variant="primary", size="lg")
+                            self.btn_patrol_pick = gr.Button("🤲 识别抓取", variant="primary")
+                            self.btn_patrol_clean = gr.Button("🧹 巡航清洁", variant="primary")
+                        
+                        with gr.Column(scale=1):
+                            self.btn_patrol_vac = gr.Button("🌀 巡航吸尘", variant="primary", size="lg")
+                            self.btn_patrol_mop = gr.Button("🧽 巡航擦拭", variant="primary")
+                    
+                    self.area2_output = gr.Textbox("准备执行2号场地命令", label="状态", lines=3)
+                
+                # ========== 3号场地（复杂场景） ==========
+                with gr.TabItem("🏘️ 3号场地（复杂）"):
+                    gr.Markdown("### 🏘️ 复杂场景处理")
+                    
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            self.btn_complex_clean = gr.Button("🔄 全流程", variant="primary", size="lg")
+                            self.btn_complex_1_clean = gr.Button("1️⃣ 1号凳子", variant="primary")
+                            self.btn_complex_2_clean = gr.Button("2️⃣ 2号凳子", variant="primary")
+                        
+                        with gr.Column(scale=1):
+                            self.btn_complex_3_clean = gr.Button("📺 电视柜", variant="primary", size="lg")
+                    
+                    self.area3_output = gr.Textbox("准备执行3号场地命令", label="状态", lines=3)
+                
+                # ========== 4号场地（大面清洁） ==========
+                with gr.TabItem("📏 4号场地（大面）"):
+                    gr.Markdown("### 📏 大面清洁")
+                    
+                    with gr.Row():
+                        with gr.Column(scale=1):
+                            self.btn_whole_clean = gr.Button("🔄 全流程", variant="primary", size="lg")
+                            self.btn_whole_vac = gr.Button("🌀 弓形吸尘", variant="primary")
+                            self.btn_whole_mop = gr.Button("🧹 弓形擦地", variant="primary")
+                        
+                        with gr.Column(scale=1):
+                            self.btn_edge_mop = gr.Button("📐 延边擦地", variant="primary", size="lg")
+                    
+                    self.area4_output = gr.Textbox("准备执行4号场地命令", label="状态", lines=3)
     def _create_basic_control_tab(self):
         """创建基础控制页面"""
-        with gr.TabItem("🎮 基础控制"):
+        with gr.TabItem("🎮 场景控制"):
             # Ping测试
             with gr.Row():
                 self.ping_btn = gr.Button("📡 Ping测试", variant="secondary")
@@ -280,10 +417,11 @@ class RobotUI:
             self.status = gr.Textbox("✅ 已连接", label="状态")
             
             gr.Markdown("---")
+            self._create_command_control_tab()
     
     def _create_hardware_control_tab(self):
         """创建硬件控制检测页面"""
-        with gr.TabItem("🔧 硬件控制检测"):
+        with gr.TabItem("🔧 硬件控制"):
             # 控制面板
             with gr.Column():
                 gr.Markdown("### 🔋 轮组控制")
@@ -308,17 +446,6 @@ class RobotUI:
                         self.btn_magnet_off = gr.Button("🔌 退磁", variant="secondary")
                     
                     self.magnet_output = gr.Textbox("准备就绪", label="电磁铁状态")
-            
-            gr.Markdown("---")
-            # 相机控制（新增部分）
-            with gr.Row():
-                with gr.Column(scale=1):
-                    gr.Markdown("### 📷 相机控制")
-                    
-                    with gr.Row():
-                        self.btn_camera_save = gr.Button("📸 保存相机图像", variant="primary", size="lg")
-                    
-                    self.camera_output = gr.Textbox("点击按钮保存相机当前图像", label="相机状态")
             
             gr.Markdown("---")            
             # 吸尘器控制
@@ -353,8 +480,8 @@ class RobotUI:
                     gr.Markdown("### 🦾 夹爪控制")
                     
                     with gr.Row():
-                        self.btn_jaw_close = gr.Button("🤏 关夹爪", variant="primary")
-                        self.btn_jaw_open = gr.Button("🦾 开夹爪", variant="secondary")
+                        self.btn_jaw_open = gr.Button("🦾 开夹爪", variant="primary")
+                        self.btn_jaw_close = gr.Button("🤏 关夹爪", variant="secondary")
                     
                     self.jaw_output = gr.Textbox("准备就绪", label="夹爪状态")
             
@@ -399,48 +526,48 @@ class RobotUI:
                         self.btn6 = gr.Button("放下", variant="primary")
                     
                     self.grasp_output = gr.Textbox("准备就绪", label="状态")
+            self._create_station_control_tab()
     
     def _create_station_control_tab(self):
         """创建基站控制页面"""
-        with gr.TabItem("🏠 基站控制"):
-            gr.Markdown("### 测试基站各项功能")
+        gr.Markdown("### 基站功能")
             
             # 清洗功能
-            with gr.Row():
-                with gr.Column(scale=1):
-                    gr.Markdown("### 🚿 清洗功能")
+        with gr.Row():
+            with gr.Column(scale=1):
+                gr.Markdown("### 🚿 清洗功能")
                     
-                    with gr.Row():
-                        self.btn_wash_on = gr.Button("💦 开启清洗", variant="primary", size="lg")
-                        self.btn_wash_off = gr.Button("⏹️ 关闭清洗", variant="secondary", size="lg")
+                with gr.Row():
+                    self.btn_wash_on = gr.Button("💦 开启清洗", variant="primary", size="lg")
+                    self.btn_wash_off = gr.Button("⏹️ 关闭清洗", variant="secondary", size="lg")
                     
-                    self.wash_output = gr.Textbox("准备测试清洗功能", label="清洗状态")
+                self.wash_output = gr.Textbox("准备测试清洗功能", label="清洗状态")
             
-            gr.Markdown("---")
+        gr.Markdown("---")
             
             # 吸尘功能
-            with gr.Row():
-                with gr.Column(scale=1):
-                    gr.Markdown("### 🌪️ 吸尘功能")
+        with gr.Row():
+            with gr.Column(scale=1):
+                gr.Markdown("### 🌪️ 吸尘功能")
                     
-                    with gr.Row():
-                        self.btn_dust_on = gr.Button("🌀 开启吸尘", variant="primary", size="lg")
-                        self.btn_dust_off = gr.Button("⏹️ 关闭吸尘", variant="secondary", size="lg")
+                with gr.Row():
+                    self.btn_dust_on = gr.Button("🌀 开启吸尘", variant="primary", size="lg")
+                    self.btn_dust_off = gr.Button("⏹️ 关闭吸尘", variant="secondary", size="lg")
                     
-                    self.dust_output = gr.Textbox("准备测试吸尘功能", label="吸尘状态")
+                self.dust_output = gr.Textbox("准备测试吸尘功能", label="吸尘状态")
             
-            gr.Markdown("---")
+        gr.Markdown("---")
             
             # 干燥功能
-            with gr.Row():
-                with gr.Column(scale=1):
-                    gr.Markdown("### 🔥 干燥功能")
+        with gr.Row():
+            with gr.Column(scale=1):
+                gr.Markdown("### 🔥 干燥功能")
                     
-                    with gr.Row():
-                        self.btn_dry_on = gr.Button("🔥 开启干燥", variant="primary", size="lg")
-                        self.btn_dry_off = gr.Button("⏹️ 关闭干燥", variant="secondary", size="lg")
+                with gr.Row():
+                    self.btn_dry_on = gr.Button("🔥 开启干燥", variant="primary", size="lg")
+                    self.btn_dry_off = gr.Button("⏹️ 关闭干燥", variant="secondary", size="lg")
                     
-                    self.dry_output = gr.Textbox("准备测试干燥功能", label="干燥状态")
+                self.dry_output = gr.Textbox("准备测试干燥功能", label="干燥状态")
     
     def _bind_events(self, demo):
         """绑定所有事件"""
@@ -469,8 +596,6 @@ class RobotUI:
         # 电磁铁控制
         self.btn_magnet_on.click(self.magnet_on, outputs=self.magnet_output)
         self.btn_magnet_off.click(self.magnet_off, outputs=self.magnet_output)
-        # 相机控制
-        self.btn_camera_save.click(self.camera_save, outputs=self.camera_output)
      
         # 吸尘器控制
         self.btn_catcher_on.click(self.catcher_on, outputs=self.catcher_output)
@@ -498,7 +623,7 @@ class RobotUI:
         self.btn4.click(self.action4, outputs=self.grasp_output)
         self.btn5.click(self.action5, outputs=self.grasp_output)
         self.btn6.click(self.action6, outputs=self.grasp_output)
-        
+   
         # 基站控制
         self.btn_wash_on.click(self.wash_on, outputs=self.wash_output)
         self.btn_wash_off.click(self.wash_off, outputs=self.wash_output)
@@ -507,6 +632,45 @@ class RobotUI:
         self.btn_dry_on.click(self.dry_on, outputs=self.dry_output)
         self.btn_dry_off.click(self.dry_off, outputs=self.dry_output)
         self.refresh_robot_status = lambda: self.controller.get_simple_robot_status()
+        # ========== 场景命令控制页面事件绑定 ==========
+        
+        # 通用功能
+        self.btn_cancel.click(self.send_cancel, outputs=self.general_output)
+        self.btn_back.click(self.send_back, outputs=self.general_output)
+        
+        # 工具取放
+        self.btn_vac_take.click(self.send_vac_take, outputs=self.tool_output)
+        self.btn_vac_place.click(self.send_vac_place, outputs=self.tool_output)
+        self.btn_mop_take.click(self.send_mop_take, outputs=self.tool_output)
+        self.btn_mop_place.click(self.send_mop_place, outputs=self.tool_output)
+        self.btn_mop_clean.click(self.send_mop_clean, outputs=self.tool_output)
+        
+        # 1号场地（主持人）
+        self.btn_show.click(self.send_show, outputs=self.area1_output)
+        self.btn_pick.click(self.send_pick, outputs=self.area1_output)
+        self.btn_pick_slipper.click(self.send_pick_slipper, outputs=self.area1_output)
+        self.btn_vac.click(self.send_vac, outputs=self.area1_output)
+        self.btn_change_mop.click(self.send_change_mop, outputs=self.area1_output)
+        self.btn_mop.click(self.send_mop, outputs=self.area1_output)
+        
+        # 2号场地（巡航抓取清洁）
+        self.btn_patrol_pick_clean.click(self.send_patrol_pick_clean, outputs=self.area2_output)
+        self.btn_patrol_pick.click(self.send_patrol_pick, outputs=self.area2_output)
+        self.btn_patrol_clean.click(self.send_patrol_clean, outputs=self.area2_output)
+        self.btn_patrol_vac.click(self.send_patrol_vac, outputs=self.area2_output)
+        self.btn_patrol_mop.click(self.send_patrol_mop, outputs=self.area2_output)
+        
+        # 3号场地（复杂场景）
+        self.btn_complex_clean.click(self.send_complex_clean, outputs=self.area3_output)
+        self.btn_complex_1_clean.click(self.send_complex_1_clean, outputs=self.area3_output)
+        self.btn_complex_2_clean.click(self.send_complex_2_clean, outputs=self.area3_output)
+        self.btn_complex_3_clean.click(self.send_complex_3_clean, outputs=self.area3_output)
+        
+        # 4号场地（大面清洁）
+        self.btn_whole_clean.click(self.send_whole_clean, outputs=self.area4_output)
+        self.btn_whole_vac.click(self.send_whole_vac, outputs=self.area4_output)
+        self.btn_whole_mop.click(self.send_whole_mop, outputs=self.area4_output)
+        self.btn_edge_mop.click(self.send_edge_mop, outputs=self.area4_output)
 # ui_interface.py
 # 在状态监控页面中使用相机类
 

@@ -5,22 +5,63 @@
 
 # 机器人配置
 ROBOTS = {
-    "ROBOT0 (DOMAIN=0)": {"domain": "0", "ip": "192.0.0.0"},
-    "ROBOT7 (DOMAIN=80)": {"domain": "80", "ip": "192.168.0.107"},
+    "ROBOT0 (DOMAIN=0)": {"domain": "0", "ip": "0.0.0.0"},
     "ROBOT4 (DOMAIN=50)": {"domain": "50", "ip": "192.168.2.196"},
-    "ROBOT9 (DOMAIN=100)": {"domain": "100", "ip": "192.168.0.109"},
+    "ROBOT5 (DOMAIN=60)": {"domain": "60", "ip": "192.168.2.197"},
+    "ROBOT6 (DOMAIN=70)": {"domain": "70", "ip": "192.168.2.198"},
+    "ROBOT7 (DOMAIN=80)": {"domain": "80", "ip": "192.168.2.199"},
 }
 
 # ROS2配置
 ROS_CONFIG = {
     'RMW_IMPLEMENTATION': 'rmw_cyclonedds_cpp',
 }
+# 完整的用户命令配置
+USER_COMMANDS = {
+    # ========== 通用功能 ==========
+    "CANCEL": "CANCEL",              # 停止动作
+    "BACK": "BACK",                  # 回到场地中央
+    
+    # 工具取放
+    "VAC_PLACE": "VAC_PLACE",        # 放吸尘器
+    "VAC_TAKE": "VAC_TAKE",          # 取吸尘器
+    "MOP_PLACE": "MOP_PLACE",        # 放拖布
+    "MOP_TAKE": "MOP_TAKE",          # 取拖布
+    "MOP_CLEAN": "MOP_CLEAN",        # 洗拖布
+    
+    # ========== 1号场地（主持人） ==========
+    "SHOW": "SHOW",                  # 开场动作展示
+    "PICK": "PICK",                  # 抓物品放置
+    "PICK_SLIPPER": "PICK_SLIPPER",  # 抓拖鞋放置
+    "VAC": "VAC",                    # 识别吸尘
+    "CHANGE_MOP": "CHANGE_MOP",      # 集尘放置吸尘器取拖布不回洗
+    "MOP": "MOP",                    # 脏污识别擦拭
+    
+    # ========== 2号场地（巡航抓取清洁） ==========
+    "PATROL_PICK_CLEAN": "PATROL_PICK_CLEAN",  # 全流程
+    "PATROL_PICK": "PATROL_PICK",              # 识别抓取
+    "PATROL_CLEAN": "PATROL_CLEAN",            # 巡航清洁
+    "PATROL_VAC": "PATROL_VAC",                # 巡航吸尘
+    "PATROL_MOP": "PATROL_MOP",                # 巡航擦拭
+    
+    # ========== 3号场地（复杂场景） ==========
+    "COMPLEX_CLEAN": "COMPLEX_CLEAN",          # 全流程
+    "COMPLEX_1_CLEAN": "COMPLEX_1_CLEAN",      # 1号凳子处理
+    "COMPLEX_2_CLEAN": "COMPLEX_2_CLEAN",      # 2号凳子处理
+    "COMPLEX_3_CLEAN": "COMPLEX_3_CLEAN",      # 电视柜处理
+    
+    # ========== 4号场地（大面清洁） ==========
+    "WHOLE_CLEAN": "WHOLE_CLEAN",              # 全流程
+    "WHOLE_VAC": "WHOLE_VAC",                  # 弓形吸尘
+    "WHOLE_MOP": "WHOLE_MOP",                  # 弓形擦地
+    "EDGE_MOP": "EDGE_MOP",                    # 延边擦地
+}
 # 相机配置
 CAMERA_CONFIG = {
     # 相机话题
     "topics": {
         "color": "/camera/color/image_raw",      # 彩色相机
-        "depth": "/camera/depth/image_rect_raw",  # 深度相机
+        "depth": "/camera/depth/image_raw/compressedDepth",  # 深度相机
         "ir": "/camera/infra1/image_rect_raw",    # 红外相机
     },
     
@@ -51,10 +92,10 @@ GRASP_COMMANDS = {
 
 # 移动命令配置
 MOVEMENT_COMMANDS = {
-    "forward": (0.1, 0.0),
-    "backward": (-0.1, 0.0),
-    "left": (0.0, 0.1745),
-    "right": (0.0, -0.1745),
+    "forward": (0.15, 0.0),
+    "backward": (-0.15, 0.0),
+    "left": (0.0, 0.32),
+    "right": (0.0, -0.32),
     "stop": (0.0, 0.0),
 }
 
@@ -72,12 +113,12 @@ ARM_PARAMS = {
     ],
     "fold": [
         {"q": 0.1, "mode": None},
-        {"q": 1.0, "mode": 0},
-        {"q": -1.1, "mode": None},
+        {"q": 1.3, "mode": 0},
+        {"q": -1.3, "mode": None},
         {"q": 0.0, "mode": None},
         {"q": 0.1, "mode": None},
-        {"q": -1.0, "mode": None},
-        {"q": 1.1, "mode": None},
+        {"q": -1.3, "mode": None},
+        {"q": 1.3, "mode": None},
         {"q": 0.0, "mode": None},
     ]
 }
@@ -99,7 +140,6 @@ SERVICE_NAMES = {
     "dust": "/station/control/dust",
     "dry": "/station/control/dry",
     "grasp_action": "/function/arm/grasp",
-    "camera_save": "/camera/save_images",  # 新增相机保存服务
 
 }
 
@@ -109,5 +149,6 @@ TOPIC_NAMES = {
     "gripper": "/gripper_position",
     "arm_command": "/bimaxArmCommandValues",
     "robot_state": "/bimaxArmStateValues",  # 注意：这里使用的是RobotState消息
+    "user_command": "/user/command",     # 用户命令话题
 
 }

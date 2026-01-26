@@ -15,6 +15,7 @@ from bimax_msgs.srv import MagnetControl, CatcherControl, MopControl
 from bimax_msgs.msg import JawCommand, RobotCommand, MotorCommand, RobotState, MotorState
 from std_srvs.srv import Trigger, SetBool,Empty
 from .config import ROBOTS, GRASP_COMMANDS, MOVEMENT_COMMANDS, ARM_PARAMS, JAW_PARAMS, ROS_CONFIG
+from .command_handler import CommandHandler  # 导入命令处理器
 
 
 class RobotController:
@@ -23,9 +24,9 @@ class RobotController:
         for key, value in ROS_CONFIG.items():
             os.environ[key] = value
         
-        self.current_robot = "ROBOT7 (DOMAIN=0)"
+        self.current_robot = "ROBOT7 (DOMAIN=80)"
         self.domain_id = "80"
-        self.ip = "192.168.0.107"
+        self.ip = "192.168.2.199"
         self.node = None
         self.setup_ros2()
         self.command_grasp = GRASP_COMMANDS
@@ -47,7 +48,7 @@ class RobotController:
                 ["ping", "-c", "2", "-W", "1", self.ip],
                 capture_output=True,
                 text=True,
-                timeout=3
+                timeout=2
             )
             return "✅ 在线" if result.returncode == 0 else "❌ 离线"
         except:
@@ -404,38 +405,6 @@ class RobotController:
                 
         except Exception as e:
             return f"❌ {desc}异常: {str(e)[:50]}"
-    def save_camera_images(self, action_name="保存相机图像"):
-        """调用相机保存图像服务"""
-        if not self.node:
-            return f"❌ 节点未就绪"
-        
-        try:
-            if not self.node.camera_save_client or not self.node.camera_save_client.service_is_ready():
-                return f"❌ 相机保存服务未就绪"
-            
-            # 创建请求
-            request = Empty.Request()
-            
-            # 调用服务
-            start_time = time.time()
-            future = self.node.camera_save_client.call_async(request)
-            rclpy.spin_until_future_complete(self.node, future, timeout_sec=3.0)
-            elapsed = time.time() - start_time
-            
-            if future.done():
-                try:
-                    response = future.result()
-                    # Empty服务通常返回空响应，但我们可以检查是否成功调用
-                    self.node.get_logger().info(f"相机保存命令已调用，耗时: {elapsed:.1f}s")
-                    return f"✅ {action_name}成功 ({elapsed:.1f}s)"
-                except Exception as e:
-                    return f"❌ 相机保存响应错误 ({elapsed:.1f}s): {str(e)[:50]}"
-            else:
-                return f"❌ 相机保存服务调用超时"
-                
-        except Exception as e:
-            return f"❌ 相机保存异常: {str(e)[:50]}"
-        # 相机处理器在节点初始化时自动创建
     
     def capture_camera_image(self, camera_type=None, resize_width=None):
         """捕获相机图像 - 接口方法"""
@@ -500,3 +469,189 @@ class RobotController:
             return None
         
         return self.node.camera_handler.get_last_capture()
+    
+    def send_cancel(self):
+        """停止动作"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.cancel()
+        return message
+    
+    def send_back(self):
+        """回到场地中央"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.back()
+        return message
+    
+    def send_vac_place(self):
+        """放吸尘器"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.vac_place()
+        return message
+    
+    def send_vac_take(self):
+        """取吸尘器"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.vac_take()
+        return message
+    
+    def send_mop_place(self):
+        """放拖布"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.mop_place()
+        return message
+    
+    def send_mop_take(self):
+        """取拖布"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.mop_take()
+        return message
+    
+    def send_mop_clean(self):
+        """洗拖布"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.mop_clean()
+        return message
+    
+    # ========== 1号场地（主持人） ==========
+    def send_show(self):
+        """开场动作展示"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.show()
+        return message
+    
+    def send_pick(self):
+        """抓物品放置"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.pick()
+        return message
+    
+    def send_pick_slipper(self):
+        """抓拖鞋放置"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.pick_slipper()
+        return message
+    
+    def send_vac(self):
+        """识别吸尘"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.vac()
+        return message
+    
+    def send_change_mop(self):
+        """集尘放置吸尘器取拖布不回洗"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.change_mop()
+        return message
+    
+    def send_mop(self):
+        """脏污识别擦拭"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.mop()
+        return message
+    
+    # ========== 2号场地（巡航抓取清洁） ==========
+    def send_patrol_pick_clean(self):
+        """全流程"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.patrol_pick_clean()
+        return message
+    
+    def send_patrol_pick(self):
+        """识别抓取"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.patrol_pick()
+        return message
+    
+    def send_patrol_clean(self):
+        """巡航清洁"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.patrol_clean()
+        return message
+    
+    def send_patrol_vac(self):
+        """巡航吸尘"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.patrol_vac()
+        return message
+    
+    def send_patrol_mop(self):
+        """巡航擦拭"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.patrol_mop()
+        return message
+    
+    # ========== 3号场地（复杂场景） ==========
+    def send_complex_clean(self):
+        """全流程"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.complex_clean()
+        return message
+    
+    def send_complex_1_clean(self):
+        """1号凳子处理"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.complex_1_clean()
+        return message
+    
+    def send_complex_2_clean(self):
+        """2号凳子处理"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.complex_2_clean()
+        return message
+    
+    def send_complex_3_clean(self):
+        """电视柜处理"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.complex_3_clean()
+        return message
+    
+    # ========== 4号场地（大面清洁） ==========
+    def send_whole_clean(self):
+        """全流程"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.whole_clean()
+        return message
+    
+    def send_whole_vac(self):
+        """弓形吸尘"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.whole_vac()
+        return message
+    
+    def send_whole_mop(self):
+        """弓形擦地"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.whole_mop()
+        return message
+    
+    def send_edge_mop(self):
+        """延边擦地"""
+        if not self.node.command_handler:
+            return "❌ 命令处理器未初始化"
+        success, message = self.node.command_handler.edge_mop()
+        return message
