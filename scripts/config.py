@@ -12,6 +12,9 @@ ROBOTS = {
     "ROBOT7 (DOMAIN=80)": {"domain": "80", "ip": "192.168.2.199"},
     "ROBOT9 (DOMAIN=100)": {"domain": "100", "ip": "192.168.2.201"},
     "ROBOT10 (DOMAIN=110)": {"domain": "110", "ip": "192.168.2.195"},
+    "ROBOT11 (DOMAIN=120)": {"domain": "120", "ip": "192.168.2.135"},
+    "ROBOT12 (DOMAIN=130)": {"domain": "130", "ip": "192.168.2.69"},
+    "ROBOT14 (DOMAIN=150)": {"domain": "150", "ip": "192.168.2.238"},
 }
 
 # ROS2配置
