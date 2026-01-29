@@ -10,6 +10,8 @@ ROBOTS = {
     "ROBOT5 (DOMAIN=60)": {"domain": "60", "ip": "192.168.2.197"},
     "ROBOT6 (DOMAIN=70)": {"domain": "70", "ip": "192.168.2.198"},
     "ROBOT7 (DOMAIN=80)": {"domain": "80", "ip": "192.168.2.199"},
+    "ROBOT9 (DOMAIN=100)": {"domain": "100", "ip": "192.168.2.201"},
+    "ROBOT10 (DOMAIN=110)": {"domain": "110", "ip": "192.168.2.195"},
 }
 
 # ROS2配置
@@ -139,6 +141,7 @@ SERVICE_NAMES = {
     "wash": "/station/control/wash",
     "dust": "/station/control/dust",
     "dry": "/station/control/dry",
+    "water": "/station/control/water",
     "grasp_action": "/function/arm/grasp",
 
 }
