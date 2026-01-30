@@ -33,7 +33,7 @@ class RobotController:
     
     def setup_ros2(self):
         """设置ROS2环境并启动节点"""
-        os.environ['ROS_DOMAIN_ID'] = self.domain_id
+        # os.environ['ROS_DOMAIN_ID'] = self.domain_id
         if rclpy.ok():
             rclpy.shutdown()
         
