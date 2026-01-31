@@ -318,7 +318,7 @@ class RobotController:
             else:
                 result_msgs.append("❌ 重置服务未就绪")
             
-            time.sleep(0.2)
+            time.sleep(2)
             
             # 2. 初始化错误码
             if self.node.init_client.service_is_ready():
@@ -654,4 +654,11 @@ class RobotController:
         if not self.node.command_handler:
             return "❌ 命令处理器未初始化"
         success, message = self.node.command_handler.edge_mop()
+        return message
+    def send_arm_grasp_action(self, command="activate"):
+        """发送机械臂抓取Action"""
+        if not self.node:
+            return "❌ 节点未就绪，无法发送机械臂动作"
+        
+        success, message = self.node.send_arm_grasp_action(command)
         return message

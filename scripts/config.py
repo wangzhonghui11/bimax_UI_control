@@ -117,13 +117,13 @@ ARM_PARAMS = {
         {"q": 0.0, "mode": None},
     ],
     "fold": [
-        {"q": 0.1, "mode": None},
-        {"q": 1.3, "mode": 0},
-        {"q": -1.3, "mode": None},
+        {"q": 0.12, "mode": None},
+        {"q": 1.1, "mode": 0},
+        {"q": -1.1, "mode": None},
         {"q": 0.0, "mode": None},
-        {"q": 0.1, "mode": None},
-        {"q": -1.3, "mode": None},
-        {"q": 1.3, "mode": None},
+        {"q": 0.12, "mode": None},
+        {"q": -1.1, "mode": None},
+        {"q": 1.1, "mode": None},
         {"q": 0.0, "mode": None},
     ]
 }
@@ -156,5 +156,16 @@ TOPIC_NAMES = {
     "arm_command": "/bimaxArmCommandValues",
     "robot_state": "/bimaxArmStateValues",  # 注意：这里使用的是RobotState消息
     "user_command": "/user/command",     # 用户命令话题
-
+}
+# 在文件末尾添加 ROS2 Action 配置：
+# ROS2 Action配置
+ROS2_ACTIONS = {
+    # 机械臂抓取动作
+    "arm_grasp": {
+        "action_name": "/function/arm/grasp",
+        "action_type": "bimax_msgs/action/BimaxFunction",
+        "command": "activate",
+        "timeout": 10.0,
+        "description": "激活机械臂抓取"
+    }   
 }

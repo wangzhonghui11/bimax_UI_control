@@ -79,7 +79,7 @@ class RobotUI:
         self.send_mop_place = lambda: self.controller.send_mop_place()
         self.send_mop_take = lambda: self.controller.send_mop_take()
         self.send_mop_clean = lambda: self.controller.send_mop_clean()
-        
+        self.send_arm_grasp_action = lambda: self.controller.send_arm_grasp_action("activate")
         # ========== 1号场地（主持人） ==========
         self.send_show = lambda: self.controller.send_show()
         self.send_pick = lambda: self.controller.send_pick()
@@ -322,8 +322,14 @@ class RobotUI:
                             gr.Markdown("### 🚨 紧急控制")
                             self.btn_cancel = gr.Button("⏹️ 停止动作", variant="stop", size="lg")
                             self.btn_back = gr.Button("🏠 回到中央", variant="primary", size="lg")
+                            self.btn_arm_grasp_action = gr.Button(  # 机械臂按钮放在这里
+                                "🦾 机械臂抓取(Action)", 
+                                variant="primary",
+                                size="lg"
+                            )
+                            
                             self.general_output = gr.Textbox("准备发送命令", label="状态", lines=2)
-                        
+                     
                         with gr.Column(scale=1):
                             gr.Markdown("### 🧰 工具取放")
                             with gr.Row():
@@ -637,7 +643,7 @@ class RobotUI:
         # 通用功能
         self.btn_cancel.click(self.send_cancel, outputs=self.general_output)
         self.btn_back.click(self.send_back, outputs=self.general_output)
-        
+        self.btn_arm_grasp_action.click(self.send_arm_grasp_action,outputs=self.general_output)        
         # 工具取放
         self.btn_vac_take.click(self.send_vac_take, outputs=self.tool_output)
         self.btn_vac_place.click(self.send_vac_place, outputs=self.tool_output)
