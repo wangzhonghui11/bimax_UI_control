@@ -107,23 +107,23 @@ MOVEMENT_COMMANDS = {
 # 机械臂控制参数
 ARM_PARAMS = {
     "home": [
-        {"q": 0.1, "mode": None},
+        {"q": 0.12, "mode": None},
         {"q": 0.0, "mode": 0},
         {"q": 0.0, "mode": None},
         {"q": 0.0, "mode": None},
-        {"q": 0.1, "mode": None},
+        {"q": 0.12, "mode": None},
         {"q": 0.0, "mode": None},
         {"q": 0.0, "mode": None},
         {"q": 0.0, "mode": None},
     ],
     "fold": [
-        {"q": 0.1, "mode": None},
-        {"q": 1.3, "mode": 0},
-        {"q": -1.3, "mode": None},
+        {"q": 0.12, "mode": None},
+        {"q": 1.1, "mode": 0},
+        {"q": -1.1, "mode": None},
         {"q": 0.0, "mode": None},
-        {"q": 0.1, "mode": None},
-        {"q": -1.3, "mode": None},
-        {"q": 1.3, "mode": None},
+        {"q": 0.12, "mode": None},
+        {"q": -1.1, "mode": None},
+        {"q": 1.1, "mode": None},
         {"q": 0.0, "mode": None},
     ]
 }
