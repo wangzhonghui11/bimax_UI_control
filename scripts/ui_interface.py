@@ -9,11 +9,28 @@ from .config import ROBOTS
 from .robot_controller import RobotController
 import threading
 from .config import CAMERA_CONFIG
-
+from .arm_slider_controller import ArmSliderController
 
 class RobotUI:
     def __init__(self):
         self.controller = RobotController()
+        # 机械臂滑件控制（关节0/4: cm 0~0.224，其余: rad -1.57~1.57）
+        joint_limits = [
+            (0.0, 0.224),     # joint 0 (cm)
+            (-1.57, 1.57),    # joint 1 (rad)
+            (-1.57, 1.57),    # joint 2 (rad)
+            (-1.57, 1.57),    # joint 3 (rad)
+            (0.0, 0.224),     # joint 4 (cm)
+            (-1.57, 1.57),    # joint 5 (rad)
+            (-1.57, 1.57),    # joint 6 (rad)
+            (-1.57, 1.57),    # joint 7 (rad)
+        ]
+        self.arm_slider = ArmSliderController(
+            robot_controller=self.controller,
+            joint_count=8,
+            publish_hz=10.0,           # 拖动时最多 10Hz 发布
+            joint_limits=joint_limits
+        )
         self._setup_event_handlers()
     
     def _setup_event_handlers(self):
@@ -499,7 +516,27 @@ class RobotUI:
                     self.arm_output = gr.Textbox("准备就绪", label="机械臂状态")
             
             gr.Markdown("---")
-            
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("## 🎚️ 机械臂关节滑件控制")
+                    gr.Markdown("关节0/4单位: cm（0~0.224）；其余单位: rad（-1.57~1.57）")
+
+                    # 8个关节 slider
+                    self.joint0 = gr.Slider(0.0, 0.224, value=0.12, step=0.001, label="关节0 (cm)")
+                    self.joint1 = gr.Slider(-1.57, 1.57, value=1.1, step=0.01, label="关节1 (rad)")
+                    self.joint2 = gr.Slider(-1.57, 1.57, value=-1.1, step=0.01, label="关节2 (rad)")
+                    self.joint3 = gr.Slider(-1.57, 1.57, value=0.0, step=0.01, label="关节3 (rad)")
+                    self.joint4 = gr.Slider(0.0, 0.224, value=0.12, step=0.001, label="关节4 (cm)")
+                    self.joint5 = gr.Slider(-1.57, 1.57, value=-1.1, step=0.01, label="关节5 (rad)")
+                    self.joint6 = gr.Slider(-1.57, 1.57, value=1.1, step=0.01, label="关节6 (rad)")
+                    self.joint7 = gr.Slider(-1.57, 1.57, value=0.0, step=0.01, label="关节7 (rad)")
+
+                    with gr.Row():
+                        self.btn_arm_publish = gr.Button("📤 发送当前滑件姿态", variant="primary")
+                        self.btn_arm_set_home_like = gr.Button("↩️ 滑件回到home参数", variant="secondary")
+                        self.btn_arm_set_fold_like = gr.Button("📦 滑件回到fold参数", variant="secondary")
+
+                    self.arm_slider_output = gr.Textbox("准备就绪", label="滑件状态", lines=2)
             # 电机故障处理
             with gr.Row():
                 with gr.Column(scale=1):
@@ -671,6 +708,59 @@ class RobotUI:
         self.btn_whole_vac.click(self.send_whole_vac, outputs=self.area4_output)
         self.btn_whole_mop.click(self.send_whole_mop, outputs=self.area4_output)
         self.btn_edge_mop.click(self.send_edge_mop, outputs=self.area4_output)
+        # ======== 机械臂滑件控制：拖动即发布（带节流） ========
+        def _on_joint_change(idx, v):
+            return self.arm_slider.set_joint(idx, v, publish=True)
+
+        self.joint0.change(lambda v: _on_joint_change(0, v), inputs=self.joint0, outputs=self.arm_slider_output)
+        self.joint1.change(lambda v: _on_joint_change(1, v), inputs=self.joint1, outputs=self.arm_slider_output)
+        self.joint2.change(lambda v: _on_joint_change(2, v), inputs=self.joint2, outputs=self.arm_slider_output)
+        self.joint3.change(lambda v: _on_joint_change(3, v), inputs=self.joint3, outputs=self.arm_slider_output)
+        self.joint4.change(lambda v: _on_joint_change(4, v), inputs=self.joint4, outputs=self.arm_slider_output)
+        self.joint5.change(lambda v: _on_joint_change(5, v), inputs=self.joint5, outputs=self.arm_slider_output)
+        self.joint6.change(lambda v: _on_joint_change(6, v), inputs=self.joint6, outputs=self.arm_slider_output)
+        self.joint7.change(lambda v: _on_joint_change(7, v), inputs=self.joint7, outputs=self.arm_slider_output)
+
+        # 手动发布一次（不节流）
+        def _publish_all(j0, j1, j2, j3, j4, j5, j6, j7):
+            return self.arm_slider.set_all([j0, j1, j2, j3, j4, j5, j6, j7], publish=True)
+
+        self.btn_arm_publish.click(
+            _publish_all,
+            inputs=[self.joint0, self.joint1, self.joint2, self.joint3, self.joint4, self.joint5, self.joint6, self.joint7],
+            outputs=self.arm_slider_output
+        )
+
+        # 将滑件值设置成 config.py 里 ARM_PARAMS 的 home/fold（仅设置UI，不直接发布，避免误动作）
+        from .config import ARM_PARAMS
+
+        def _set_sliders_like(command_type: str):
+            params = ARM_PARAMS.get(command_type)
+            if not params or len(params) < 8:
+                return [gr.update()] * 8 + [f"❌ ARM_PARAMS.{command_type} 不存在或长度不足"]
+            vals = [p.get("q", 0.0) for p in params[:8]]
+            # 同步到控制器缓存（不发布）
+            self.arm_slider.set_all(vals, publish=False)
+            return [
+                gr.update(value=vals[0]),
+                gr.update(value=vals[1]),
+                gr.update(value=vals[2]),
+                gr.update(value=vals[3]),
+                gr.update(value=vals[4]),
+                gr.update(value=vals[5]),
+                gr.update(value=vals[6]),
+                gr.update(value=vals[7]),
+                f"✅ 已把滑件设置为 {command_type} 参数（未发布）"
+            ]
+
+        self.btn_arm_set_home_like.click(
+            lambda: _set_sliders_like("home"),
+            outputs=[self.joint0, self.joint1, self.joint2, self.joint3, self.joint4, self.joint5, self.joint6, self.joint7, self.arm_slider_output]
+        )
+        self.btn_arm_set_fold_like.click(
+            lambda: _set_sliders_like("fold"),
+            outputs=[self.joint0, self.joint1, self.joint2, self.joint3, self.joint4, self.joint5, self.joint6, self.joint7, self.arm_slider_output]
+        )
 # ui_interface.py
 # 在状态监控页面中使用相机类
 
