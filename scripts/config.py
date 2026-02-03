@@ -6,15 +6,15 @@
 # 机器人配置
 ROBOTS = {
     "ROBOT0 (DOMAIN=0)": {"domain": "0", "ip": "0.0.0.0"},
-    "ROBOT4 (DOMAIN=50)": {"domain": "50", "ip": "192.168.2.196"},
-    "ROBOT5 (DOMAIN=60)": {"domain": "60", "ip": "192.168.2.197"},
-    "ROBOT6 (DOMAIN=70)": {"domain": "70", "ip": "192.168.2.198"},
-    "ROBOT7 (DOMAIN=80)": {"domain": "80", "ip": "192.168.2.199"},
-    "ROBOT9 (DOMAIN=100)": {"domain": "100", "ip": "192.168.2.201"},
-    "ROBOT10 (DOMAIN=110)": {"domain": "110", "ip": "192.168.2.195"},
-    "ROBOT11 (DOMAIN=120)": {"domain": "120", "ip": "192.168.2.135"},
-    "ROBOT12 (DOMAIN=130)": {"domain": "130", "ip": "192.168.2.69"},
-    "ROBOT14 (DOMAIN=150)": {"domain": "150", "ip": "192.168.2.238"},
+    # "ROBOT4 (DOMAIN=50)": {"domain": "50", "ip": "192.168.2.196"},
+    # "ROBOT5 (DOMAIN=60)": {"domain": "60", "ip": "192.168.2.197"},
+    # "ROBOT6 (DOMAIN=70)": {"domain": "70", "ip": "192.168.2.198"},
+    # "ROBOT7 (DOMAIN=80)": {"domain": "80", "ip": "192.168.2.199"},
+    # "ROBOT9 (DOMAIN=100)": {"domain": "100", "ip": "192.168.2.201"},
+    # "ROBOT10 (DOMAIN=110)": {"domain": "110", "ip": "192.168.2.195"},
+    # "ROBOT11 (DOMAIN=120)": {"domain": "120", "ip": "192.168.2.135"},
+    # "ROBOT12 (DOMAIN=130)": {"domain": "130", "ip": "192.168.2.69"},
+    # "ROBOT14 (DOMAIN=150)": {"domain": "150", "ip": "192.168.2.238"},
 }
 
 # ROS2配置
@@ -72,18 +72,18 @@ CAMERA_CONFIG = {
     
     # 默认设置
     "default_camera": "color",      # 默认相机类型
-    "default_timeout": 3.0,         # 默认超时时间（秒）
+    "default_timeout": 4.0,         # 默认超时时间（秒）
     "default_width": 640,           # 默认显示宽度
-    "default_quality": 85,          # JPEG压缩质量(0-100)
+    "default_quality": 50,          # JPEG压缩质量(0-100)
     
     # 保存设置
     "default_save_dir": "/tmp/camera_captures",  # 默认保存目录
     "filename_format": "{camera_type}_{timestamp}.jpg",  # 文件名格式
     
     # 捕获设置
-    "max_queue_size": 3,            # 图像队列最大大小
-    "max_burst_count": 20,          # 最大连续捕获张数
-    "min_burst_interval": 0.5,      # 最小连续捕获间隔（秒）
+    "max_queue_size": 2,            # 图像队列最大大小
+    "max_burst_count": 1,          # 最大连续捕获张数
+    "min_burst_interval": 0.1,      # 最小连续捕获间隔（秒）
 }
 # 夹爪动作配置
 GRASP_COMMANDS = {
@@ -156,5 +156,47 @@ TOPIC_NAMES = {
     "arm_command": "/bimaxArmCommandValues",
     "robot_state": "/bimaxArmStateValues",  # 注意：这里使用的是RobotState消息
     "user_command": "/user/command",     # 用户命令话题
+}
+# 在文件末尾添加 ROS2 Action 配置：
+# ROS2 Action配置
+ROS2_ACTIONS = {
+    # 机械臂抓取动作
+    "arm_grasp": {
+        "action_name": "/function/arm/grasp",
+        "action_type": "bimax_msgs/action/BimaxFunction",
+        "command": "activate",
+        "timeout": 10.0,
+        "description": "激活机械臂抓取"
+    }   
+}
 
+# SSH 可选目标（下拉多选来源）
+# 你可以放机器人ip，也可以放网关/上位机ip
+SSH_HOSTS = {
+    "Robot0": "0.0.0.0",
+    "Robot4": "192.168.2.196",
+    "Robot5": "192.168.2.197",
+    "Robot6": "192.168.2.198",
+    "Robot7": "192.168.2.199",
+    "Robot9": "192.168.2.201",
+    "Robot11": "192.168.2.195",
+    "Robot12": "192.168.2.70",
+    "Robot13": "192.168.2.135",
+    "Robot14": "192.168.2.238",
+}
+
+SSH_CONFIG = {
+    "enabled": True,
+    "default_host_label": "Robot7",   # 默认下拉选项 key
+    "port": 22,
+    "username": "bimax",
+    "password": "123",           
+}
+
+SSH_PRESET_COMMANDS = {
+    "SYS_INFO": "uname -a",
+    "PS_ROS": "ps -ef | grep -E 'ros2|bimax' | grep -v grep",
+    "ROS_TOPIC_LIST": "source /opt/ros/humble/setup.bash >/dev/null 2>&1; ros2 topic list",
+    "BIMAX_START": 'bash -lc "nohup bash /home/bimax/workspace/bimax_ws/src/bimax_main_entry/run.sh >/tmp/bimax_run.log 2>&1 &"',
+    "BIMAX_KILL": 'bash -lc "bash /home/bimax/workspace/bimax_ws/src/bimax_main_entry/kill.sh"',
 }

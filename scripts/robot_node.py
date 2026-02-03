@@ -12,7 +12,7 @@ from bimax_msgs.action import BimaxFunction
 from bimax_msgs.srv import MagnetControl, CatcherControl, MopControl
 from bimax_msgs.msg import JawCommand, RobotCommand, MotorCommand, RobotState, MotorState
 from std_srvs.srv import Trigger, SetBool ,Empty
-from .config import SERVICE_NAMES, TOPIC_NAMES
+from .config import SERVICE_NAMES, TOPIC_NAMES , ROS2_ACTIONS  # 添加导入ROS2_ACTIONS
 import threading
 from .camera_handler import CameraHandler
 from .command_handler import CommandHandler  # 导入命令处理器
@@ -76,10 +76,61 @@ class RobotNode(Node):
         self.dry_client = self.create_client(SetBool, SERVICE_NAMES['dry'])
     def _init_action_clients(self):
         """初始化Action客户端"""
-        self.action_client = ActionClient(self, BimaxFunction, SERVICE_NAMES['grasp_action'])
-        self.get_logger().info("等待action服务器...")
-        self.action_client.wait_for_server(timeout_sec=0.1)
-        self.get_logger().info("✅ Action服务器已连接")
+        # 修改这里：从ROS2_ACTIONS配置中获取action名称
+        action_name = ROS2_ACTIONS.get("arm_grasp", {}).get("action_name", SERVICE_NAMES['grasp_action'])
+        
+        self.action_client = ActionClient(self, BimaxFunction, action_name)
+        self.get_logger().info(f"等待action服务器: {action_name}")
+        
+        # 非阻塞等待
+        if self.action_client.wait_for_server(timeout_sec=0.1):
+            self.get_logger().info(f"✅ Action服务器已连接: {action_name}")
+        else:
+            self.get_logger().info(f"⏳ Action服务器等待中: {action_name}")
+    def send_arm_grasp_action(self, command="activate", timeout=10.0):
+        """
+        发送机械臂抓取Action
+        
+        Args:
+            command: 命令字符串，默认"activate"
+            timeout: 超时时间，默认10秒
+        
+        Returns:
+            tuple: (是否成功, 消息)
+        """
+        try:
+            # 获取动作配置
+            action_config = ROS2_ACTIONS.get("arm_grasp", {})
+            action_name = action_config.get("action_name", SERVICE_NAMES['grasp_action'])
+            
+            # 等待服务器
+            if not self.action_client.wait_for_server(timeout_sec=5.0):
+                return False, f"❌ Action服务器 {action_name} 未就绪"
+            
+            # 创建目标
+            goal_msg = BimaxFunction.Goal()
+            goal_msg.command = command
+            
+            # 发送目标
+            future = self.action_client.send_goal_async(goal_msg)
+            
+            # 等待结果
+            rclpy.spin_until_future_complete(self, future, timeout_sec=timeout)
+            
+            if future.done():
+                goal_handle = future.result()
+                if goal_handle.accepted:
+                    timestamp = time.strftime("%H:%M:%S")
+                    return True, f"✅ [{timestamp}] 机械臂抓取动作已发送 (命令: {command})"
+                else:
+                    return False, "❌ 机械臂抓取动作被拒绝"
+            else:
+                return False, f"❌ 发送机械臂抓取动作超时 ({timeout}秒)"
+                
+        except Exception as e:
+            error_msg = f"❌ 发送机械臂抓取动作失败: {str(e)[:50]}"
+            self.get_logger().error(error_msg)
+            return False, error_msg
     def _robot_state_callback(self, msg):
         """机器人状态回调函数"""
         current_time = time.time()
