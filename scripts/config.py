@@ -72,18 +72,18 @@ CAMERA_CONFIG = {
     
     # 默认设置
     "default_camera": "color",      # 默认相机类型
-    "default_timeout": 3.0,         # 默认超时时间（秒）
+    "default_timeout": 4.0,         # 默认超时时间（秒）
     "default_width": 640,           # 默认显示宽度
-    "default_quality": 85,          # JPEG压缩质量(0-100)
+    "default_quality": 50,          # JPEG压缩质量(0-100)
     
     # 保存设置
     "default_save_dir": "/tmp/camera_captures",  # 默认保存目录
     "filename_format": "{camera_type}_{timestamp}.jpg",  # 文件名格式
     
     # 捕获设置
-    "max_queue_size": 3,            # 图像队列最大大小
-    "max_burst_count": 20,          # 最大连续捕获张数
-    "min_burst_interval": 0.5,      # 最小连续捕获间隔（秒）
+    "max_queue_size": 2,            # 图像队列最大大小
+    "max_burst_count": 1,          # 最大连续捕获张数
+    "min_burst_interval": 0.1,      # 最小连续捕获间隔（秒）
 }
 # 夹爪动作配置
 GRASP_COMMANDS = {

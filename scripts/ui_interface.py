@@ -16,6 +16,8 @@ class RobotUI:
         self.demain_id=id
         self.ip=ip
         self.controller = RobotController(domain_id=self.demain_id,ip=self.ip)
+        self.arm_slider_ready = False
+        self.auto_ssh_login()   # 启动即登录
         # 机械臂滑件控制（关节0/4: cm 0~0.224，其余: rad -1.57~1.57）
         joint_limits = [
             (0.0, 0.224),     # joint 0 (cm)
@@ -34,7 +36,13 @@ class RobotUI:
             joint_limits=joint_limits
         )
         self._setup_event_handlers()
-    
+    def auto_ssh_login(self):
+        self.controller.setup_ssh(
+            host=self.ip,
+            username=SSH_CONFIG["username"],
+            password=SSH_CONFIG["password"],
+            port=int(SSH_CONFIG.get("port", 22) or 22),
+        )    
     def _setup_event_handlers(self):
         """设置事件处理器"""
         # 基础控制函数
@@ -45,13 +53,6 @@ class RobotUI:
             return result, robot
         
         self.switch = switch
-        # ======== SSH 预设命令（按钮触发）========
-        self.ssh_setup = lambda host_label: self.controller.setup_ssh(
-            host=SSH_HOSTS[host_label],
-            username=SSH_CONFIG["username"],
-            password=SSH_CONFIG["password"],
-            port=int(SSH_CONFIG.get("port", 22) or 22),
-        )
         self.ssh_sysinfo = lambda: self.controller.ssh_run_preset("SYS_INFO")
         self.ssh_ps_ros = lambda: self.controller.ssh_run_preset("PS_ROS")
         self.ssh_topic_list = lambda: self.controller.ssh_run_preset("ROS_TOPIC_LIST") 
@@ -186,13 +187,13 @@ class RobotUI:
                 with gr.TabItem("🖥️ SSH工具"):
                     gr.Markdown("## 🖥️ SSH 远程固定命令（选择IP）")
 
-                    self.ssh_host_select = gr.Dropdown(
-                        choices=list(SSH_HOSTS.keys()),
-                        value=SSH_CONFIG.get("default_host_label", list(SSH_HOSTS.keys())[0]),
-                        label="选择 SSH 目标"
-                    )
+                    # self.ssh_host_select = gr.Dropdown(
+                    #     choices=list(SSH_HOSTS.keys()),
+                    #     value=SSH_CONFIG.get("default_host_label", list(SSH_HOSTS.keys())[0]),
+                    #     label="选择 SSH 目标"
+                    # )
 
-                    self.btn_ssh_setup = gr.Button("✅ 配置SSH(使用config里的用户名密码)", variant="primary")
+                    # self.btn_ssh_setup = gr.Button("✅ 配置SSH(使用config里的用户名密码)", variant="primary")
 
                     with gr.Row():
                         self.btn_ssh_sysinfo = gr.Button("📋 系统信息", variant="secondary")
@@ -662,7 +663,7 @@ class RobotUI:
             outputs=self.status
         )
         # ======== SSH工具事件绑定 ========
-        self.btn_ssh_setup.click(self.ssh_setup, inputs=self.ssh_host_select, outputs=self.ssh_output)
+        # self.btn_ssh_setup.click(self.ssh_setup, inputs=self.ssh_host_select, outputs=self.ssh_output)
         self.btn_ssh_sysinfo.click(self.ssh_sysinfo, outputs=self.ssh_output)
         self.btn_ssh_ps_ros.click(self.ssh_ps_ros, outputs=self.ssh_output)
         self.btn_ssh_topic_list.click(self.ssh_topic_list, outputs=self.ssh_output)
@@ -755,7 +756,7 @@ class RobotUI:
         self.btn_edge_mop.click(self.send_edge_mop, outputs=self.area4_output)
         # ======== 机械臂滑件控制：拖动即发布（带节流） ========
         def _on_joint_change(idx, v):
-            return self.arm_slider.set_joint(idx, v, publish=True)
+            return self.arm_slider.set_joint(idx, v, publish=self.arm_slider_ready)
 
         self.joint0.change(lambda v: _on_joint_change(0, v), inputs=self.joint0, outputs=self.arm_slider_output)
         self.joint1.change(lambda v: _on_joint_change(1, v), inputs=self.joint1, outputs=self.arm_slider_output)
@@ -768,7 +769,8 @@ class RobotUI:
 
         # 手动发布一次（不节流）
         def _publish_all(j0, j1, j2, j3, j4, j5, j6, j7):
-            return self.arm_slider.set_all([j0, j1, j2, j3, j4, j5, j6, j7], publish=True)
+            self.arm_slider_ready = True          # 一旦用户手动发布过，才允许拖动即发布
+            return self.arm_slider.set_all([j0, j1, j2, j3, j4, j5, j6, j7], self.arm_slider_ready)
 
         self.btn_arm_publish.click(
             _publish_all,
