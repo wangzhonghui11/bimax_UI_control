@@ -169,3 +169,34 @@ ROS2_ACTIONS = {
         "description": "激活机械臂抓取"
     }   
 }
+
+# SSH 可选目标（下拉多选来源）
+# 你可以放机器人ip，也可以放网关/上位机ip
+SSH_HOSTS = {
+    "Robot0": "0.0.0.0",
+    "Robot4": "192.168.2.196",
+    "Robot5": "192.168.2.197",
+    "Robot6": "192.168.2.198",
+    "Robot7": "192.168.2.199",
+    "Robot9": "192.168.2.201",
+    "Robot10": "192.168.2.195",
+    "Robot11": "192.168.2.135",
+    "Robot12": "192.168.2.69",
+    "Robot14": "192.168.2.238",
+}
+
+SSH_CONFIG = {
+    "enabled": True,
+    "default_host_label": "Robot7",   # 默认下拉选项 key
+    "port": 22,
+    "username": "bimax",
+    "password": "123",           
+}
+
+SSH_PRESET_COMMANDS = {
+    "SYS_INFO": "uname -a",
+    "PS_ROS": "ps -ef | grep -E 'ros2|bimax' | grep -v grep",
+    "ROS_TOPIC_LIST": "source /opt/ros/humble/setup.bash >/dev/null 2>&1; ros2 topic list",
+    "BIMAX_START": 'bash -lc "nohup bash /home/bimax/workspace/bimax_ws/src/bimax_main_entry/run.sh >/tmp/bimax_run.log 2>&1 &"',
+    "BIMAX_KILL": 'bash -lc "bash /home/bimax/workspace/bimax_ws/src/bimax_main_entry/kill.sh"',
+}

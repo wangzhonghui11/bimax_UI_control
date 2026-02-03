@@ -10,7 +10,7 @@ from .robot_controller import RobotController
 import threading
 from .config import CAMERA_CONFIG
 from .arm_slider_controller import ArmSliderController
-
+from .config import SSH_CONFIG, SSH_HOSTS
 class RobotUI:
     def __init__(self):
         self.controller = RobotController()
@@ -43,7 +43,18 @@ class RobotUI:
             return result, robot
         
         self.switch = switch
-        
+        # ======== SSH 预设命令（按钮触发）========
+        self.ssh_setup = lambda host_label: self.controller.setup_ssh(
+            host=SSH_HOSTS[host_label],
+            username=SSH_CONFIG["username"],
+            password=SSH_CONFIG["password"],
+            port=int(SSH_CONFIG.get("port", 22) or 22),
+        )
+        self.ssh_sysinfo = lambda: self.controller.ssh_run_preset("SYS_INFO")
+        self.ssh_ps_ros = lambda: self.controller.ssh_run_preset("PS_ROS")
+        self.ssh_topic_list = lambda: self.controller.ssh_run_preset("ROS_TOPIC_LIST") 
+        self.ssh_bimax_start = lambda: self.controller.ssh_run_preset("BIMAX_START")
+        self.ssh_bimax_kill = lambda: self.controller.ssh_run_preset("BIMAX_KILL")       
         # 电磁铁控制
         self.magnet_on = lambda: self.controller.send_magnet_command(1, 1, "电磁铁充磁")
         self.magnet_off = lambda: self.controller.send_magnet_command(0, 0, "电磁铁退磁")
@@ -170,6 +181,26 @@ class RobotUI:
                 # 子Tab 2: 相机控制
                 with gr.TabItem("📷 相机监控"):
                     self._create_camera_control_subtab()
+                with gr.TabItem("🖥️ SSH工具"):
+                    gr.Markdown("## 🖥️ SSH 远程固定命令（选择IP）")
+
+                    self.ssh_host_select = gr.Dropdown(
+                        choices=list(SSH_HOSTS.keys()),
+                        value=SSH_CONFIG.get("default_host_label", list(SSH_HOSTS.keys())[0]),
+                        label="选择 SSH 目标"
+                    )
+
+                    self.btn_ssh_setup = gr.Button("✅ 配置SSH(使用config里的用户名密码)", variant="primary")
+
+                    with gr.Row():
+                        self.btn_ssh_sysinfo = gr.Button("📋 系统信息", variant="secondary")
+                        self.btn_ssh_ps_ros = gr.Button("🔎 ROS相关进程", variant="secondary")
+                        self.btn_ssh_topic_list = gr.Button("🧾 ros2 topic list", variant="secondary")
+                    with gr.Row():
+                        self.btn_ssh_bimax_start = gr.Button("▶️ 启动程序(run.sh)", variant="primary")
+                        self.btn_ssh_bimax_kill = gr.Button("⏹️ 终止程序(kill.sh)", variant="stop")
+
+                    self.ssh_output = gr.Textbox(label="SSH 输出", lines=12)                    
     def _create_simple_status_monitor_tab(self):
         """创建简化的状态监控页面"""
         with gr.TabItem("📊 状态监控"):
@@ -628,7 +659,13 @@ class RobotUI:
             inputs=self.robot_select,
             outputs=self.status
         )
-        
+        # ======== SSH工具事件绑定 ========
+        self.btn_ssh_setup.click(self.ssh_setup, inputs=self.ssh_host_select, outputs=self.ssh_output)
+        self.btn_ssh_sysinfo.click(self.ssh_sysinfo, outputs=self.ssh_output)
+        self.btn_ssh_ps_ros.click(self.ssh_ps_ros, outputs=self.ssh_output)
+        self.btn_ssh_topic_list.click(self.ssh_topic_list, outputs=self.ssh_output)
+        self.btn_ssh_bimax_start.click(self.ssh_bimax_start, outputs=self.ssh_output)
+        self.btn_ssh_bimax_kill.click(self.ssh_bimax_kill, outputs=self.ssh_output)
         # 移动控制事件
         self.btn_w.click(self.move_forward, outputs=self.cmd_output)
         self.btn_x.click(self.move_backward, outputs=self.cmd_output)

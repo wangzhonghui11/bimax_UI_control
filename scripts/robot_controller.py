@@ -16,7 +16,8 @@ from bimax_msgs.msg import JawCommand, RobotCommand, MotorCommand, RobotState, M
 from std_srvs.srv import Trigger, SetBool,Empty
 from .config import ROBOTS, GRASP_COMMANDS, MOVEMENT_COMMANDS, ARM_PARAMS, JAW_PARAMS, ROS_CONFIG
 from .command_handler import CommandHandler  # 导入命令处理器
-
+from .ssh_command_client import SSHCommandClient
+from .config import SSH_CONFIG, SSH_PRESET_COMMANDS
 
 class RobotController:
     def __init__(self):
@@ -30,7 +31,9 @@ class RobotController:
         self.node = None
         self.setup_ros2()
         self.command_grasp = GRASP_COMMANDS
-    
+        self.ssh_client = None
+        self.ssh_username = None
+        self.ssh_password = None    
     def setup_ros2(self):
         """设置ROS2环境并启动节点"""
         # os.environ['ROS_DOMAIN_ID'] = self.domain_id
@@ -68,6 +71,40 @@ class RobotController:
             self.setup_ros2()
             return f"✅ 已切换到: {robot_name}"
         return f"❌ 切换失败"
+    def setup_ssh(self, host: str, username: str, password: str, port: int = 22):
+        if self.ssh_client:
+            try:
+                self.ssh_client.close()
+            except Exception:
+                pass
+
+        self.ssh_client = SSHCommandClient(
+            host=host,
+            port=port,
+            username=username,
+            password=password,
+            timeout=5.0,
+        )
+        return f"✅ SSH 已配置: {username}@{host}:{port}"
+
+    def ssh_run_preset(self, preset_name: str):
+        if not SSH_CONFIG.get("enabled", False):
+            return "❌ SSH 未启用"
+        if not self.ssh_client:
+            return "❌ SSH 未配置（请先选择IP并点击配置SSH）"
+
+        cmd = SSH_PRESET_COMMANDS.get(preset_name)
+        if not cmd:
+            return f"❌ 未知预设命令: {preset_name}"
+
+        try:
+            result = self.ssh_client.exec(cmd, timeout=15.0)
+            header = f"[{preset_name}] host={self.ssh_client.host} exit={result.exit_code}\n$ {cmd}\n"
+            if result.ok:
+                return (header + result.stdout).strip() or (header + "(no output)")
+            return (header + "STDOUT:\n" + result.stdout + "\nSTDERR:\n" + result.stderr).strip()
+        except Exception as e:
+            return f"❌ SSH 执行异常: {str(e)[:200]}"
     def get_simple_robot_status(self):
         """获取简化的机器人状态"""
         if not self.node:
