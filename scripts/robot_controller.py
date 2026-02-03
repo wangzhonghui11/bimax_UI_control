@@ -20,14 +20,14 @@ from .ssh_command_client import SSHCommandClient
 from .config import SSH_CONFIG, SSH_PRESET_COMMANDS
 
 class RobotController:
-    def __init__(self):
+    def __init__(self,domain_id,ip):
         # 设置ROS环境
         for key, value in ROS_CONFIG.items():
             os.environ[key] = value
         
-        self.current_robot = "ROBOT7 (DOMAIN=80)"
-        self.domain_id = "80"
-        self.ip = "192.168.2.199"
+        self.current_robot = "ROBOT0"
+        self.domain_id = domain_id
+        self.ip = ip
         self.node = None
         self.setup_ros2()
         self.command_grasp = GRASP_COMMANDS

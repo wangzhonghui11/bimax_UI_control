@@ -17,7 +17,7 @@ def run_user_instance(user_config):
     user_id = user_config["id"]
     port = user_config["port"]
     domain_id = user_config["domain_id"]
-    
+    host_ip=user_config["ip"]
     print(f"[进程{user_id}] 🚀 启动用户{user_id} (端口: {port}, DOMAIN_ID: {domain_id})...")
     
     # 设置环境变量 - 每个进程独立
@@ -25,7 +25,7 @@ def run_user_instance(user_config):
     
     try:
         # 在独立进程中创建UI实例
-        robot_ui = RobotUI()
+        robot_ui = RobotUI(id=domain_id,ip=host_ip)
         demo = robot_ui.create_ui()
         demo.title = f"机器人控制 - 用户{user_id} (DOMAIN:{domain_id})"
         
@@ -52,10 +52,10 @@ def main():
     
     # 定义4个用户的配置，每个绑定不同的DOMAIN_ID
     users_config = [
-        {"id": 1, "port": 7860, "name": "用户1", "domain_id": 80},
-        {"id": 2, "port": 7861, "name": "用户2", "domain_id": 60},
-        {"id": 3, "port": 7862, "name": "用户3", "domain_id": 100},
-        {"id": 4, "port": 7863, "name": "用户4", "domain_id": 50}
+        {"id": 11, "port": 7860, "name": "用户1", "domain_id": 110,"ip":"192.168.2.195"},
+        {"id": 12, "port": 7861, "name": "用户2", "domain_id": 120,"ip":"192.168.2.70"},
+        {"id": 13, "port": 7862, "name": "用户3", "domain_id": 130,"ip":"192.168.2.135"},
+        {"id": 14, "port": 7863, "name": "用户4", "domain_id": 140,"ip":"192.168.2.238"}
     ]
     
     print(f"📱 准备启动 {len(users_config)} 个独立进程...")

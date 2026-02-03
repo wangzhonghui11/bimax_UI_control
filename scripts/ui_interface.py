@@ -12,8 +12,10 @@ from .config import CAMERA_CONFIG
 from .arm_slider_controller import ArmSliderController
 from .config import SSH_CONFIG, SSH_HOSTS
 class RobotUI:
-    def __init__(self):
-        self.controller = RobotController()
+    def __init__(self,id,ip):
+        self.demain_id=id
+        self.ip=ip
+        self.controller = RobotController(domain_id=self.demain_id,ip=self.ip)
         # 机械臂滑件控制（关节0/4: cm 0~0.224，其余: rad -1.57~1.57）
         joint_limits = [
             (0.0, 0.224),     # joint 0 (cm)
