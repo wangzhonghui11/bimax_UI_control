@@ -146,6 +146,7 @@ SERVICE_NAMES = {
     "dry": "/station/control/dry",
     "water": "/station/control/water",
     "grasp_action": "/function/arm/grasp",
+    "motor_zero":"led_control"
 
 }
 

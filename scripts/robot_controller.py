@@ -11,7 +11,7 @@ import subprocess
 import time
 from .robot_node import RobotNode
 from bimax_msgs.action import BimaxFunction
-from bimax_msgs.srv import MagnetControl, CatcherControl, MopControl
+from bimax_msgs.srv import MagnetControl, CatcherControl, MopControl,LedControl
 from bimax_msgs.msg import JawCommand, RobotCommand, MotorCommand, RobotState, MotorState
 from std_srvs.srv import Trigger, SetBool,Empty
 from .config import ROBOTS, GRASP_COMMANDS, MOVEMENT_COMMANDS, ARM_PARAMS, JAW_PARAMS, ROS_CONFIG
@@ -325,7 +325,55 @@ class RobotController:
                 
         except Exception as e:
             return f"❌ 拖布异常: {desc} - {str(e)[:50]}"
-    
+    def send_motor_zero_command(self, green_state, yellow_state, action_name=""):
+        """发送LED控制命令"""
+        desc = action_name if action_name else f"LED控制(绿色={green_state}, 黄色={yellow_state})"
+        
+        try:  
+            # 创建请求
+            request = LedControl.Request()
+            request.green_state = int(green_state)
+            request.yellow_state = int(yellow_state)
+            
+            # 异步调用服务
+            future = self.node.motor_zero_client.call_async(request)
+            rclpy.spin_until_future_complete(self.node, future, timeout_sec=1.0)
+            
+            if future.done():
+                try:
+                    response = future.result()
+                    if response.success:
+                        self.node.get_logger().info(f"setLedSwitch green={green_state} yellow={yellow_state}")
+                    else:
+                        error_msg = response.message if hasattr(response, 'message') else "未知错误"
+                        return f"❌ 服务返回失败: {desc} - {error_msg}"
+                except Exception as e:
+                    return f"❌ 响应异常: {desc} - {str(e)[:50]}"
+            else:
+                return f"❌ 调用超时: {desc}" 
+            time.sleep(2)
+            request.green_state = int(1)
+            request.yellow_state = int(1)    
+            # 异步调用服务
+            future = self.node.motor_zero_client.call_async(request)
+            rclpy.spin_until_future_complete(self.node, future, timeout_sec=1.0)
+            
+            if future.done():
+                try:
+                    response = future.result()
+                    if response.success:
+                        self.node.get_logger().info(f"setLedSwitch green={green_state} yellow={yellow_state}")
+                    else:
+                        error_msg = response.message if hasattr(response, 'message') else "未知错误"
+                        return f"❌ 服务返回失败: {desc} - {error_msg}"
+                except Exception as e:
+                    return f"❌ 响应异常: {desc} - {str(e)[:50]}"
+            else:
+                return f"❌ 调用超时: {desc}"    
+        except Exception as e:
+            return f"❌ 调用异常: {desc} - {str(e)[:50]}" 
+               
+
     def reset_motor_faults(self):
         """重置电机错误并初始化错误码"""
         if not self.node:

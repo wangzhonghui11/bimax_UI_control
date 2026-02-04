@@ -42,7 +42,7 @@ class ArmSliderController:
     def get_values(self) -> List[float]:
         return list(self.values)
 
-    def set_joint(self, index: int, value: float, publish: bool = True) -> str:
+    def set_joint(self, index: int, value: float, publish: bool = False) -> str:
         if index < 0 or index >= self.joint_count:
             return f"❌ 关节索引越界: {index}"
 
@@ -55,7 +55,7 @@ class ArmSliderController:
             return self.publish(throttle=True)
         return f"✅ 已设置关节{index}={v:.4f}"
 
-    def set_all(self, values: List[float], publish: bool = True) -> str:
+    def set_all(self, values: List[float], publish: bool = False) -> str:
         if len(values) != self.joint_count:
             return f"❌ 关节数量不匹配: 期望{self.joint_count}, 实际{len(values)}"
 

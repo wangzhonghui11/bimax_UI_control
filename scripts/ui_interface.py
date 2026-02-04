@@ -61,7 +61,15 @@ class RobotUI:
         # 电磁铁控制
         self.magnet_on = lambda: self.controller.send_magnet_command(1, 1, "电磁铁充磁")
         self.magnet_off = lambda: self.controller.send_magnet_command(0, 0, "电磁铁退磁")
-        
+        #电机置零
+        self.motor_zero_all_on = lambda: self.controller.send_motor_zero_command(2, 1, "所有电机写零位")  
+        self.motor_zero_1_on = lambda: self.controller.send_motor_zero_command(3, 1, "1号电机写零位")  
+        self.motor_zero_2_on = lambda: self.controller.send_motor_zero_command(4, 1, "2号电机写零位")       
+        self.motor_zero_3_on = lambda: self.controller.send_motor_zero_command(5, 1, "3号电机写零位")       
+        self.motor_zero_4_on = lambda: self.controller.send_motor_zero_command(6, 1, "4号电机写零位")       
+        self.motor_zero_5_on = lambda: self.controller.send_motor_zero_command(7, 1, "5号电机写零位")       
+        self.motor_zero_6_on = lambda: self.controller.send_motor_zero_command(8, 1, "6号电机写零位")       
+     
         # 吸尘器控制
         self.catcher_on = lambda: self.controller.send_catcher_command(1, 1, "吸尘器开启")
         self.catcher_off = lambda: self.controller.send_catcher_command(1, 0, "吸尘器关闭")
@@ -579,7 +587,25 @@ class RobotUI:
                 self.motor_output = gr.Textbox("点击按钮重置电机错误并初始化", label="电机状态")
                                        
             gr.Markdown("---")
+            # 机械臂控制
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("### 🤖 电机零位重置")
+                    
+                    with gr.Row():
+                        self.btn_motor_zero_all = gr.Button("🏠 所有电机写零位", variant="primary")
+
+                    with gr.Row():                        
+                        self.btn_motor_zero_1 = gr.Button("📦 1号电机写零", variant="primary")
+                        self.btn_motor_zero_2 = gr.Button("🏠 2号电机写零", variant="primary")
+                        self.btn_motor_zero_3 = gr.Button("📦 3号电机写零", variant="primary")
+                    with gr.Row():                        
+                        self.btn_motor_zero_4 = gr.Button("📦 4号电机写零", variant="primary")
+                        self.btn_motor_zero_5 = gr.Button("🏠 5号电机写零", variant="primary")
+                        self.btn_motor_zero_6 = gr.Button("📦 6号电机写零", variant="primary")                          
+                    self.motor_zero_output = gr.Textbox("准备就绪", label="状态")
             
+            gr.Markdown("---")            
             # 机械臂动作控制
             with gr.Row():
                 with gr.Column(scale=1):
@@ -688,7 +714,13 @@ class RobotUI:
         # 机械臂控制
         self.btn_arm_home.click(self.arm_home, outputs=self.arm_output)
         self.btn_arm_fold.click(self.arm_fold, outputs=self.arm_output)
-        
+        self.btn_motor_zero_all.click(self.motor_zero_all_on, outputs=self.motor_zero_output) 
+        self.btn_motor_zero_1.click(self.motor_zero_1_on, outputs=self.motor_zero_output)   
+        self.btn_motor_zero_2.click(self.motor_zero_2_on, outputs=self.motor_zero_output)   
+        self.btn_motor_zero_3.click(self.motor_zero_3_on, outputs=self.motor_zero_output)   
+        self.btn_motor_zero_4.click(self.motor_zero_4_on, outputs=self.motor_zero_output)   
+        self.btn_motor_zero_5.click(self.motor_zero_5_on, outputs=self.motor_zero_output)   
+        self.btn_motor_zero_6.click(self.motor_zero_6_on, outputs=self.motor_zero_output)          
         # 电机故障重置
         self.btn_motor_reset.click(self.motor_reset, outputs=self.motor_output)
         
@@ -764,7 +796,8 @@ class RobotUI:
         # 手动发布一次（不节流）
         def _publish_all(j0, j1, j2, j3, j4, j5, j6, j7):
             self.arm_slider_ready = True          # 一旦用户手动发布过，才允许拖动即发布
-            return self.arm_slider.set_all([j0, j1, j2, j3, j4, j5, j6, j7], self.arm_slider_ready)
+            self.arm_slider.set_all([j0, j1, j2, j3, j4, j5, j6, j7], self.arm_slider_ready)
+            self.arm_slider_ready = False          #            
 
         self.btn_arm_publish.click(
             _publish_all,

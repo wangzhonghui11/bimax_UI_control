@@ -9,7 +9,7 @@ from rclpy.node import Node
 from rclpy.action import ActionClient
 from geometry_msgs.msg import Twist
 from bimax_msgs.action import BimaxFunction
-from bimax_msgs.srv import MagnetControl, CatcherControl, MopControl
+from bimax_msgs.srv import MagnetControl, CatcherControl, MopControl,LedControl
 from bimax_msgs.msg import JawCommand, RobotCommand, MotorCommand, RobotState, MotorState
 from std_srvs.srv import Trigger, SetBool ,Empty
 from .config import SERVICE_NAMES, TOPIC_NAMES , ROS2_ACTIONS  # 添加导入ROS2_ACTIONS
@@ -65,7 +65,7 @@ class RobotNode(Node):
         self.magnet_client = self.create_client(MagnetControl, SERVICE_NAMES['magnet'])
         self.catcher_client = self.create_client(CatcherControl, SERVICE_NAMES['catcher'])
         self.mop_client = self.create_client(MopControl, SERVICE_NAMES['mop'])
-        
+        self.motor_zero_client = self.create_client(LedControl, SERVICE_NAMES['motor_zero'])        
         # 电机故障服务
         self.reset_client = self.create_client(Trigger, SERVICE_NAMES['reset'])
         self.init_client = self.create_client(Trigger, SERVICE_NAMES['init'])
@@ -169,6 +169,7 @@ class RobotNode(Node):
             ("基站吸尘", self.dust_client),
             ("基站干燥", self.dry_client),
             ("基站上水", self.water_client),
+            ("电机零位", self.motor_zero_client),            
         ]
         
         for name, client in services:
