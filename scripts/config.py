@@ -196,7 +196,7 @@ SSH_CONFIG = {
 SSH_PRESET_COMMANDS = {
     "SYS_INFO": "uname -a",
     "PS_ROS": "ps -ef | grep -E 'ros2|bimax' | grep -v grep",
-    "ROS_TOPIC_LIST": "source /opt/ros/humble/setup.bash >/dev/null 2>&1; ros2 topic list",
+    "ROS_TOPIC_LIST": "source /opt/ros/humble/setup.bash; ros2 topic list",
     "BIMAX_START": 'bash -lc "nohup bash /home/bimax/workspace/bimax_ws/src/bimax_main_entry/run.sh >/tmp/bimax_run.log 2>&1 &"',
     "BIMAX_KILL": 'bash -lc "bash /home/bimax/workspace/bimax_ws/src/bimax_main_entry/kill.sh"',
 }

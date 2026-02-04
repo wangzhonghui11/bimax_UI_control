@@ -21,12 +21,12 @@ class RobotUI:
         # 机械臂滑件控制（关节0/4: cm 0~0.224，其余: rad -1.57~1.57）
         joint_limits = [
             (0.0, 0.224),     # joint 0 (cm)
-            (-1.57, 1.57),    # joint 1 (rad)
-            (-1.57, 1.57),    # joint 2 (rad)
+            (-2.35, 1.57),    # joint 1 (rad)
+            (-1.57, 2.35),    # joint 2 (rad)
             (-1.57, 1.57),    # joint 3 (rad)
             (0.0, 0.224),     # joint 4 (cm)
-            (-1.57, 1.57),    # joint 5 (rad)
-            (-1.57, 1.57),    # joint 6 (rad)
+            (-1.57, 2.35),    # joint 5 (rad)
+            (-2.35, 1.57),    # joint 6 (rad)
             (-1.57, 1.57),    # joint 7 (rad)
         ]
         self.arm_slider = ArmSliderController(
@@ -101,6 +101,7 @@ class RobotUI:
         self.dust_on = lambda: self.controller.call_station_service("dust", True, "吸尘功能")
         self.dust_off = lambda: self.controller.call_station_service("dust", False, "吸尘功能")
         self.dry_on = lambda: self.controller.call_station_service("dry", True, "干燥功能")
+        self.wather_on = lambda: self.controller.call_station_service("water", True, "上水功能")
         self.dry_off = lambda: self.controller.call_station_service("dry", False, "干燥功能")
             # ========== 通用功能 ==========
         self.send_cancel = lambda: self.controller.send_cancel()
@@ -186,15 +187,6 @@ class RobotUI:
                     self._create_camera_control_subtab()
                 with gr.TabItem("🖥️ SSH工具"):
                     gr.Markdown("## 🖥️ SSH 远程固定命令（选择IP）")
-
-                    # self.ssh_host_select = gr.Dropdown(
-                    #     choices=list(SSH_HOSTS.keys()),
-                    #     value=SSH_CONFIG.get("default_host_label", list(SSH_HOSTS.keys())[0]),
-                    #     label="选择 SSH 目标"
-                    # )
-
-                    # self.btn_ssh_setup = gr.Button("✅ 配置SSH(使用config里的用户名密码)", variant="primary")
-
                     with gr.Row():
                         self.btn_ssh_sysinfo = gr.Button("📋 系统信息", variant="secondary")
                         self.btn_ssh_ps_ros = gr.Button("🔎 ROS相关进程", variant="secondary")
@@ -404,6 +396,7 @@ class RobotUI:
                         
                         with gr.Column(scale=1):
                             self.btn_vac = gr.Button("🌀 识别吸尘", variant="primary", size="lg")
+                            self.btn_wather_on = gr.Button("💦 开启上水", variant="primary", size="lg")
                             self.btn_change_mop = gr.Button("🔄 换拖布", variant="secondary")
                             self.btn_mop = gr.Button("🧹 识别擦拭", variant="primary")
                     
@@ -563,8 +556,8 @@ class RobotUI:
 
                     # 8个关节 slider
                     self.joint0 = gr.Slider(0.0, 0.224, value=0.12, step=0.001, label="关节0 (cm)")
-                    self.joint1 = gr.Slider(-1.57, 1.57, value=1.1, step=0.01, label="关节1 (rad)")
-                    self.joint2 = gr.Slider(-1.57, 1.57, value=-1.1, step=0.01, label="关节2 (rad)")
+                    self.joint1 = gr.Slider(-2.34, 1.57, value=1.1, step=0.01, label="关节1 (rad)")
+                    self.joint2 = gr.Slider(-2.34, 2.34, value=-1.1, step=0.01, label="关节2 (rad)")
                     self.joint3 = gr.Slider(-1.57, 1.57, value=0.0, step=0.01, label="关节3 (rad)")
                     self.joint4 = gr.Slider(0.0, 0.224, value=0.12, step=0.001, label="关节4 (cm)")
                     self.joint5 = gr.Slider(-1.57, 1.57, value=-1.1, step=0.01, label="关节5 (rad)")
@@ -733,6 +726,7 @@ class RobotUI:
         self.btn_pick.click(self.send_pick, outputs=self.area1_output)
         self.btn_pick_slipper.click(self.send_pick_slipper, outputs=self.area1_output)
         self.btn_vac.click(self.send_vac, outputs=self.area1_output)
+        self.btn_wather_on.click(self.wather_on, outputs=self.area1_output)
         self.btn_change_mop.click(self.send_change_mop, outputs=self.area1_output)
         self.btn_mop.click(self.send_mop, outputs=self.area1_output)
         

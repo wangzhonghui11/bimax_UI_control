@@ -71,6 +71,7 @@ class RobotNode(Node):
         self.init_client = self.create_client(Trigger, SERVICE_NAMES['init'])
         
         # 基站服务
+        self.water_client = self.create_client(SetBool, SERVICE_NAMES['water'])
         self.wash_client = self.create_client(SetBool, SERVICE_NAMES['wash'])
         self.dust_client = self.create_client(SetBool, SERVICE_NAMES['dust'])
         self.dry_client = self.create_client(SetBool, SERVICE_NAMES['dry'])
@@ -167,6 +168,7 @@ class RobotNode(Node):
             ("基站清洗", self.wash_client),
             ("基站吸尘", self.dust_client),
             ("基站干燥", self.dry_client),
+            ("基站上水", self.water_client),
         ]
         
         for name, client in services:

@@ -411,6 +411,8 @@ class RobotController:
                 client = self.node.dust_client
             elif service_name == "dry":
                 client = self.node.dry_client
+            elif service_name == "water":
+                client = self.node.water_client
             else:
                 return f"❌ 未知服务: {service_name}"
             
