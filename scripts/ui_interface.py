@@ -69,7 +69,7 @@ class RobotUI:
         self.motor_zero_4_on = lambda: self.controller.send_motor_zero_command(6, 1, "4号电机写零位")       
         self.motor_zero_5_on = lambda: self.controller.send_motor_zero_command(7, 1, "5号电机写零位")       
         self.motor_zero_6_on = lambda: self.controller.send_motor_zero_command(8, 1, "6号电机写零位")       
-     
+        self.motor_disable = lambda: self.controller.send_motor_zero_command(1, 3, "电机失能")       
         # 吸尘器控制
         self.catcher_on = lambda: self.controller.send_catcher_command(1, 1, "吸尘器开启")
         self.catcher_off = lambda: self.controller.send_catcher_command(1, 0, "吸尘器关闭")
@@ -165,6 +165,14 @@ class RobotUI:
             
             # 页面加载时自动ping
             demo.load(self.do_ping, outputs=self.ping_status)
+                    # 新增：页面加载时自动SSH连接
+            def init_ssh():
+                try:
+                    self.auto_ssh_login()
+                    return "✅ SSH已连接"
+                except Exception as e:
+                    return f"❌ SSH连接失败: {str(e)[:50]}"
+            demo.load(init_ssh, outputs=self.ssh_output)
             # 设置自动刷新
             if hasattr(self, 'status_auto_state') and hasattr(self, 'status_refresh_interval'):
                 # 获取间隔值
@@ -591,7 +599,8 @@ class RobotUI:
             with gr.Row():
                 with gr.Column(scale=1):
                     gr.Markdown("### 🤖 电机零位重置")
-                    
+                    with gr.Row():
+                        self.btn_motor_disable = gr.Button("🏠 所有电机失能", variant="primary")                    
                     with gr.Row():
                         self.btn_motor_zero_all = gr.Button("🏠 所有电机写零位", variant="primary")
 
@@ -720,7 +729,8 @@ class RobotUI:
         self.btn_motor_zero_3.click(self.motor_zero_3_on, outputs=self.motor_zero_output)   
         self.btn_motor_zero_4.click(self.motor_zero_4_on, outputs=self.motor_zero_output)   
         self.btn_motor_zero_5.click(self.motor_zero_5_on, outputs=self.motor_zero_output)   
-        self.btn_motor_zero_6.click(self.motor_zero_6_on, outputs=self.motor_zero_output)          
+        self.btn_motor_zero_6.click(self.motor_zero_6_on, outputs=self.motor_zero_output)  
+        self.btn_motor_disable.click(self.motor_disable, outputs=self.motor_zero_output)         
         # 电机故障重置
         self.btn_motor_reset.click(self.motor_reset, outputs=self.motor_output)
         

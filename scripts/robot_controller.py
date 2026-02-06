@@ -331,10 +331,11 @@ class RobotController:
         
         try:  
             # 创建请求
+            start_time = time.time()
             request = LedControl.Request()
             request.green_state = int(green_state)
             request.yellow_state = int(yellow_state)
-            
+       
             # 异步调用服务
             future = self.node.motor_zero_client.call_async(request)
             rclpy.spin_until_future_complete(self.node, future, timeout_sec=1.0)
@@ -351,18 +352,19 @@ class RobotController:
                     return f"❌ 响应异常: {desc} - {str(e)[:50]}"
             else:
                 return f"❌ 调用超时: {desc}" 
-            time.sleep(2)
+            time.sleep(1)
             request.green_state = int(1)
             request.yellow_state = int(1)    
             # 异步调用服务
             future = self.node.motor_zero_client.call_async(request)
             rclpy.spin_until_future_complete(self.node, future, timeout_sec=1.0)
-            
+            elapsed = time.time() - start_time                 
             if future.done():
                 try:
                     response = future.result()
                     if response.success:
                         self.node.get_logger().info(f"setLedSwitch green={green_state} yellow={yellow_state}")
+                        return f"✅ 电机控制成功 ({elapsed:.1f}s): {desc}"
                     else:
                         error_msg = response.message if hasattr(response, 'message') else "未知错误"
                         return f"❌ 服务返回失败: {desc} - {error_msg}"
