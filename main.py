@@ -88,17 +88,8 @@ def main():
         url = f"http://localhost:{user['port']}"
         print(f"   👤 {user['name']} (DOMAIN:{user['domain_id']}): {url}")
     
-    # 自动打开浏览器
-    auto_open = input("\n🔗 是否自动打开所有用户界面? (y/n): ").lower().strip()
-    if auto_open == 'y' or auto_open == 'yes':
-        for user in users_config:
-            url = f"http://localhost:{user['port']}"
-            webbrowser.open_new_tab(url)
-            time.sleep(0.5)
-    
     print("\n" + "=" * 50)
     print("🔄 系统正在运行中...")
-    print("📊 每个用户在独立的进程中运行，DOMAIN完全隔离")
     print("🛑 按 Ctrl+C 停止所有进程")
     print("=" * 50)
     
