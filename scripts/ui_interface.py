@@ -35,6 +35,7 @@ class RobotUI:
             publish_hz=10.0,           # 拖动时最多 10Hz 发布
             joint_limits=joint_limits
         )
+        self.get_station_status = lambda: self.controller.get_simple_station_status()
         self._setup_event_handlers()
     def auto_ssh_login(self):
         self.controller.setup_ssh(
@@ -263,7 +264,13 @@ class RobotUI:
                 label="状态信息",
                 lines=3
             )
+            # ========== 添加基站状态 ==========
+            gr.Markdown("---")
+            gr.Markdown("### 🏠 基站状态")
             
+            with gr.Row():
+                btn_refresh_station = gr.Button("🔄 刷新基站状态", variant="primary")
+                station_status = gr.Textbox("点击刷新获取基站状态", label="基站状态", lines=2)            
             # 局部变量，用于线程
             running = False
             auto_refresh_thread = None
@@ -369,7 +376,22 @@ class RobotUI:
             btn_stop_auto_refresh.click(
                 stop_auto_refresh_func, 
                 outputs=status_summary
-            ) 
+            )
+        def refresh_station_status_func():
+            """刷新基站状态"""
+            return self.controller.get_simple_station_status()
+        
+        # 绑定事件 - 添加基站状态按钮
+        btn_refresh_status.click(
+            refresh_status_func,
+            outputs=motor_status_components + [status_summary]
+        )
+        
+        btn_refresh_station.click(
+            refresh_station_status_func,
+            outputs=station_status
+        )
+         
     def _create_command_control_tab(self):
             gr.Markdown("# 🚀 场景命令控制")
             

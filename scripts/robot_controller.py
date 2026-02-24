@@ -12,7 +12,7 @@ import time
 from .robot_node import RobotNode
 from bimax_msgs.action import BimaxFunction
 from bimax_msgs.srv import MagnetControl, CatcherControl, MopControl,LedControl
-from bimax_msgs.msg import JawCommand, RobotCommand, MotorCommand, RobotState, MotorState
+from bimax_msgs.msg import JawCommand, RobotCommand, MotorCommand,StationState, RobotState, MotorState
 from std_srvs.srv import Trigger, SetBool,Empty
 from .config import ROBOTS, GRASP_COMMANDS, MOVEMENT_COMMANDS, ARM_PARAMS, JAW_PARAMS, ROS_CONFIG
 from .command_handler import CommandHandler  # 导入命令处理器
@@ -105,6 +105,25 @@ class RobotController:
             return (header + "STDOUT:\n" + result.stdout + "\nSTDERR:\n" + result.stderr).strip()
         except Exception as e:
             return f"❌ SSH 执行异常: {str(e)[:200]}"
+
+    def get_simple_station_status(self):
+        if not self.node:
+            return "❌ 节点未就绪"
+        try:
+            station_state = self.node.station_state_data
+            if station_state is None:
+                return "⏳ 等待基站状态数据..."
+            
+            station_error = station_state.error_id
+            
+            # 根据 error_id 返回不同的状态
+            if station_error == 0:
+                return "✅ 基站正常"
+            else:
+                return f"⚠️ 基站错误代码: {station_error}"
+                
+        except Exception as e:
+            return f"❌ 获取状态异常: {str(e)[:50]}"
     def get_simple_robot_status(self):
         """获取简化的机器人状态"""
         if not self.node:

@@ -67,9 +67,9 @@ CAMERA_CONFIG = {
     "topics": {
         "color": "/camera/color/image_raw",      # 彩色相机
         "depth": "/camera/depth/image_raw/compressedDepth",  # 深度相机
-        "ir": "/camera/infra1/image_rect_raw",    # 红外相机
-    },
-    
+        "dirt": "/dirt/debug_image",    # 脏污相机
+    },                                                                                                                                                                                                                                                             
+
     # 默认设置
     "default_camera": "color",      # 默认相机类型
     "default_timeout": 4.0,         # 默认超时时间（秒）
@@ -130,7 +130,7 @@ ARM_PARAMS = {
 
 # 夹爪参数
 JAW_PARAMS = {
-    "close": {"pos": 90.0, "mode": 0},
+    "close": {"pos": 89.0, "mode": 0},
     "open": {"pos": 45.0, "mode": 1},
 }
 
@@ -157,6 +157,7 @@ TOPIC_NAMES = {
     "arm_command": "/bimaxArmCommandValues",
     "robot_state": "/bimaxArmStateValues",  # 注意：这里使用的是RobotState消息
     "user_command": "/user/command",     # 用户命令话题
+    "station":"/station/state"
 }
 # 在文件末尾添加 ROS2 Action 配置：
 # ROS2 Action配置
@@ -197,7 +198,8 @@ SSH_CONFIG = {
 SSH_PRESET_COMMANDS = {
     "SYS_INFO": "uname -a",
     "PS_ROS": "ps -ef | grep -E 'ros2|bimax' | grep -v grep",
-    "ROS_TOPIC_LIST": "source /opt/ros/humble/setup.bash; ros2 topic list",
+    "ROS_TOPIC_LIST": "echo 'Domain ID: ' $ROS_DOMAIN_ID",
     "BIMAX_START": 'bash -lc "nohup bash /home/bimax/workspace/bimax_ws/src/bimax_main_entry/run.sh >/tmp/bimax_run.log 2>&1 &"',
     "BIMAX_KILL": 'bash -lc "bash /home/bimax/workspace/bimax_ws/src/bimax_main_entry/kill.sh"',
+    
 }

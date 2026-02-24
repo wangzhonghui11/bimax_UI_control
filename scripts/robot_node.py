@@ -10,7 +10,7 @@ from rclpy.action import ActionClient
 from geometry_msgs.msg import Twist
 from bimax_msgs.action import BimaxFunction
 from bimax_msgs.srv import MagnetControl, CatcherControl, MopControl,LedControl
-from bimax_msgs.msg import JawCommand, RobotCommand, MotorCommand, RobotState, MotorState
+from bimax_msgs.msg import JawCommand, RobotCommand,StationState, MotorCommand, RobotState, MotorState
 from std_srvs.srv import Trigger, SetBool ,Empty
 from .config import SERVICE_NAMES, TOPIC_NAMES , ROS2_ACTIONS  # 添加导入ROS2_ACTIONS
 import threading
@@ -19,8 +19,7 @@ from .command_handler import CommandHandler  # 导入命令处理器
 
 class RobotNode(Node):
     def __init__(self, domain_id):
-        super().__init__(f'robot_ctrl_{domain_id}')
-        
+        super().__init__(f'robot_ctrl_{domain_id}')       
         # 初始化发布者和订阅者
         self._init_publishers()
         self._init_subscribers()
@@ -29,8 +28,10 @@ class RobotNode(Node):
         # 存储状态数据
         # 存储状态数据和接收时间
         self.robot_state_data = None
+        self.station_state_data = None
         self.last_receive_time = None  # 最后接收时间
         self.robot_state_lock = threading.Lock()
+        self.station_state_lock = threading.Lock()
         # 添加相机处理器
         self.camera_handler = None
         self._init_camera_handler() 
@@ -56,6 +57,12 @@ class RobotNode(Node):
             RobotState,
             TOPIC_NAMES['robot_state'],
             self._robot_state_callback,
+            10
+        )
+        self.station_state_subscriber = self.create_subscription(
+            StationState,
+            TOPIC_NAMES['station'],
+            self._station_state_callback,
             10
         )
         self.get_logger().info(f"已订阅机器人状态话题: {TOPIC_NAMES['robot_state']}")    
@@ -139,7 +146,13 @@ class RobotNode(Node):
         with self.robot_state_lock:
             self.robot_state_data = msg
             self.last_receive_time = current_time
-            
+    def _station_state_callback(self, msg):
+        """机器人状态回调函数"""
+        current_time = time.time()
+        
+        with self.station_state_lock:
+            self.station_state_data = msg
+            self.last_receive_time = current_time            
     def get_robot_state(self):
         """获取当前机器人状态，如果超时则返回None"""
         with self.robot_state_lock:
